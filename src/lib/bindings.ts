@@ -45,6 +45,17 @@ export const commands = {
 	/**  Answers from the library's documents, citing the passages used. */
 	askLibrary: (question: string, language: string) => typedError<Answer, AppError>(__TAURI_INVOKE("ask_library", { question, language })),
 	libraryGraph: () => typedError<Graph, AppError>(__TAURI_INVOKE("library_graph")),
+	listChats: () => __TAURI_INVOKE<ChatSummary[]>("list_chats"),
+	loadChat: (id: string) => typedError<Chat_Serialize, AppError>(__TAURI_INVOKE("load_chat", { id })),
+	deleteChat: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("delete_chat", { id })),
+	/**
+	 *  Asks the engine in a conversation (a new one without `chat_id`) and streams
+	 *  the answer. The conversation is saved before and after, also when stopped.
+	 */
+	sendMessage: (chatId: string | null, text: string, attachments: Attachment_Deserialize[], context: ChatContext, onEvent: Channel<ChatEvent_Deserialize>) => typedError<Chat_Serialize, AppError>(__TAURI_INVOKE("send_message", { chatId, text, attachments, context, onEvent })),
+	/**  The user's answer to a tool call the rules ask about. */
+	answerApproval: (id: string, approval: Approval) => __TAURI_INVOKE<void>("answer_approval", { id, approval }),
+	stopChat: () => __TAURI_INVOKE<void>("stop_chat"),
 };
 
 /* Types */
@@ -80,6 +91,29 @@ export type ApiModel_Serialize = {
  */
 export type AppError = { kind: "catalog"; message: string } | { kind: "network"; message: string } | { kind: "keychain"; message: string } | { kind: "provider"; message: string } | { kind: "database"; message: string } | { kind: "io"; message: string } | { kind: "report"; message: string };
 
+export type Approval = "once" | 
+/**  Allow this tool from now on: the host saves the rule. */
+"always" | "reject";
+
+/**  A file the user attached to a conversation: the only files the report tool reads. */
+export type Attachment = Attachment_Serialize | Attachment_Deserialize;
+
+/**  A file the user attached to a conversation: the only files the report tool reads. */
+export type Attachment_Deserialize = {
+	/**  The file name, which is how the model refers to it. */
+	name: string,
+	path: string,
+	sheet?: string | null,
+};
+
+/**  A file the user attached to a conversation: the only files the report tool reads. */
+export type Attachment_Serialize = {
+	/**  The file name, which is how the model refers to it. */
+	name: string,
+	path: string,
+	sheet: string | null,
+};
+
 /**  Connectors implemented inside MCForge itself. */
 export type BuiltinModule = "database" | "reports";
 
@@ -100,6 +134,54 @@ export type Catalog_Serialize = {
 };
 
 export type Category = "files" | "data" | "reports" | "web" | "development" | "apps";
+
+export type Chat = Chat_Serialize | Chat_Deserialize;
+
+export type ChatContext = {
+	language: string,
+	numberFormat: NumberFormat,
+	/**  Preset report focus names in the user's language, by id. */
+	focusNames: { [key in string]: string },
+};
+
+/**  Streamed to the UI while a turn runs. */
+export type ChatEvent = ChatEvent_Serialize | ChatEvent_Deserialize;
+
+/**  Streamed to the UI while a turn runs. */
+export type ChatEvent_Deserialize = { kind: "text"; text: string } | { kind: "toolStarted"; id: string; name: string; input: unknown } | 
+/**  The rules ask first: the turn waits for `answer_approval`. */
+{ kind: "approvalNeeded"; id: string; name: string; input: unknown } | { kind: "toolFinished"; id: string; isError: boolean; view: ToolView_Deserialize };
+
+/**  Streamed to the UI while a turn runs. */
+export type ChatEvent_Serialize = { kind: "text"; text: string } | { kind: "toolStarted"; id: string; name: string; input: unknown } | 
+/**  The rules ask first: the turn waits for `answer_approval`. */
+{ kind: "approvalNeeded"; id: string; name: string; input: unknown } | { kind: "toolFinished"; id: string; isError: boolean; view: ToolView_Serialize };
+
+export type ChatSummary = {
+	id: string,
+	title: string,
+	updated: string,
+};
+
+export type Chat_Deserialize = {
+	id: string,
+	title: string,
+	/**  RFC 3339. */
+	updated: string,
+	messages: Message_Deserialize[],
+	/**  Files the user attached; the only ones the report tool may read. */
+	attachments?: Attachment_Deserialize[],
+};
+
+export type Chat_Serialize = {
+	id: string,
+	title: string,
+	/**  RFC 3339. */
+	updated: string,
+	messages: Message_Serialize[],
+	/**  Files the user attached; the only ones the report tool may read. */
+	attachments: Attachment_Serialize[],
+};
 
 export type Cluster = {
 	/**  Its two most distinctive words; empty for a file on its own. */
@@ -138,6 +220,16 @@ export type Connector_Serialize = {
 	/**  Whether the wizard can check this configuration before saving. Derived at load time. */
 	testable: boolean,
 };
+
+export type Decision = 
+/**  Allowed by the user's rules. */
+"allowed" | 
+/**  The rules ask first, and the user said yes. */
+"approved" | 
+/**  The rules ask first, and the user said no. */
+"rejected" | 
+/**  Blocked by the user's rules. */
+"blocked";
 
 export type Edge = {
 	/**  Indexes into `nodes`. */
@@ -284,6 +376,30 @@ export type LocalModel_Serialize = {
 	tools: ToolSkill,
 };
 
+/**
+ *  One turn of a conversation. Tool calls are assistant parts; their results
+ *  travel back in the next user message, as the providers expect.
+ */
+export type Message = Message_Serialize | Message_Deserialize;
+
+/**
+ *  One turn of a conversation. Tool calls are assistant parts; their results
+ *  travel back in the next user message, as the providers expect.
+ */
+export type Message_Deserialize = {
+	role: Role,
+	parts: Part_Deserialize[],
+};
+
+/**
+ *  One turn of a conversation. Tool calls are assistant parts; their results
+ *  travel back in the next user message, as the providers expect.
+ */
+export type Message_Serialize = {
+	role: Role,
+	parts: Part_Serialize[],
+};
+
 export type Models = Models_Serialize | Models_Deserialize;
 
 export type Models_Deserialize = {
@@ -330,6 +446,20 @@ export type Package_Serialize = {
 	args: string[],
 	env: { [key in string]: string },
 };
+
+export type Part = Part_Serialize | Part_Deserialize;
+
+export type Part_Deserialize = { type: "text"; text: string } | { type: "toolCall"; id: string; name: string; input: unknown } | { type: "toolResult"; id: string; 
+/**  What the model reads. */
+output: string; isError: boolean; 
+/**  What the user sees; never sent to the model. */
+view?: ToolView_Deserialize | null };
+
+export type Part_Serialize = { type: "text"; text: string } | { type: "toolCall"; id: string; name: string; input: unknown } | { type: "toolResult"; id: string; 
+/**  What the model reads. */
+output: string; isError: boolean; 
+/**  What the user sees; never sent to the model. */
+view: ToolView_Serialize | null };
 
 /**  What an update would do now. */
 export type Pending = {
@@ -426,6 +556,11 @@ export type ReportOutcome_Serialize = {
 	warnings: ReportWarning[],
 };
 
+export type ReportRef = {
+	path: string,
+	title: string,
+};
+
 export type ReportRequest = ReportRequest_Serialize | ReportRequest_Deserialize;
 
 export type ReportRequest_Deserialize = {
@@ -466,6 +601,8 @@ export type ReportStage = "reading" | "planning" | "querying" | "writing" | "ren
 export type ReportWarning = { kind: "planFailed"; detail: string } | { kind: "queriesDropped"; detail: number } | { kind: "narrativeFailed"; detail: string };
 
 export type Risk = "read" | "write" | "destructive" | "network" | "send";
+
+export type Role = "user" | "assistant";
 
 export type SavedFocuses = SavedFocuses_Serialize | SavedFocuses_Deserialize;
 
@@ -540,6 +677,11 @@ export type SourceFormat =
 /**  The imported sheet and every visible worksheet, in workbook order. */
 { kind: "spreadsheet"; sheet: string; sheets: string[] };
 
+export type SourceRef = {
+	title: string,
+	path: string,
+};
+
 export type SourceSummary = {
 	file: string,
 	table: string,
@@ -547,6 +689,11 @@ export type SourceSummary = {
 	columns: SourceColumn[],
 	format: SourceFormat,
 };
+
+/**  What a tool did, as data. */
+export type Summary = { kind: "passages"; count: number; documents: number } | { kind: "rows"; count: number; truncated: boolean } | { kind: "tables"; count: number } | { kind: "columns"; count: number } | { kind: "changed"; rows: number } | { kind: "templates"; count: number } | { kind: "report"; sections: number } | { kind: "error"; message: string } | 
+/**  Not run: blocked or declined. */
+{ kind: "skipped" };
 
 export type SystemReport = SystemReport_Serialize | SystemReport_Deserialize;
 
@@ -558,6 +705,11 @@ export type SystemReport_Deserialize = {
 export type SystemReport_Serialize = {
 	hardware: Hardware,
 	recommendations: Recommendation_Serialize[],
+};
+
+export type Table = {
+	columns: string[],
+	rows: string[][],
 };
 
 export type TemplateInfo = {
@@ -575,6 +727,33 @@ export type TestReport = {
 export type Tool = Tool_Serialize | Tool_Deserialize;
 
 export type ToolSkill = "poor" | "fair" | "good" | "great";
+
+/**  How a tool call went, for the conversation on screen. The UI words it. */
+export type ToolView = ToolView_Serialize | ToolView_Deserialize;
+
+/**  How a tool call went, for the conversation on screen. The UI words it. */
+export type ToolView_Deserialize = {
+	decision: Decision,
+	summary: Summary,
+	/**  Rows the tool returned, as text. */
+	table?: Table | null,
+	/**  Library documents the tool drew on. */
+	sources?: SourceRef[],
+	/**  A report the tool generated. */
+	report?: ReportRef | null,
+};
+
+/**  How a tool call went, for the conversation on screen. The UI words it. */
+export type ToolView_Serialize = {
+	decision: Decision,
+	summary: Summary,
+	/**  Rows the tool returned, as text. */
+	table: Table | null,
+	/**  Library documents the tool drew on. */
+	sources: SourceRef[],
+	/**  A report the tool generated. */
+	report: ReportRef | null,
+};
 
 export type Tool_Deserialize = {
 	name: string,

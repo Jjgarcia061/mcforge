@@ -45,6 +45,7 @@ pub enum Part {
     ToolCall {
         id: String,
         name: String,
+        #[specta(type = specta_typescript::Unknown)]
         input: Value,
     },
     ToolResult {
@@ -157,12 +158,14 @@ pub enum ChatEvent {
     ToolStarted {
         id: String,
         name: String,
+        #[specta(type = specta_typescript::Unknown)]
         input: Value,
     },
     /// The rules ask first: the turn waits for `answer_approval`.
     ApprovalNeeded {
         id: String,
         name: String,
+        #[specta(type = specta_typescript::Unknown)]
         input: Value,
     },
     ToolFinished {
