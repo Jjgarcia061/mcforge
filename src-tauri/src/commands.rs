@@ -1,5 +1,6 @@
 //! The only surface the UI can call. Each command is a thin adapter over a core module.
 
+use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, RwLock};
 
@@ -13,6 +14,9 @@ use crate::catalog::{BuiltinModule, Catalog, Server, TestReport, Values};
 use crate::database;
 use crate::error::{Error, Result};
 use crate::hardware::Hardware;
+use crate::library::{
+    Answer, Graph, Library, LibraryStatus, OllamaEmbedder, Progress, UpdateSummary,
+};
 use crate::providers::chat::EngineModel;
 use crate::providers::ollama::{self, OllamaStatus, PullProgress};
 use crate::providers::{self, Provider};
@@ -35,8 +39,11 @@ pub struct AppState {
     pub setup: RwLock<Option<Setup>>,
     pub history: History,
     pub focuses: Focuses,
+    pub library: Library,
     /// The report being generated, so `cancel_report` can stop it.
     pub running: Mutex<Option<AbortHandle>>,
+    /// The library update in progress, so `cancel_library_update` can stop it.
+    pub indexing: Mutex<Option<AbortHandle>>,
 }
 
 pub struct Paths {
@@ -44,6 +51,7 @@ pub struct Paths {
     pub cache: PathBuf,
     pub history: PathBuf,
     pub focuses: PathBuf,
+    pub library: PathBuf,
     /// Where reports go unless the `reports` connector says otherwise.
     pub default_reports: PathBuf,
 }
@@ -178,22 +186,34 @@ pub async fn generate_report(
     request: ReportRequest,
     on_stage: Channel<ReportStage>,
 ) -> Result<ReportOutcome> {
-    let (handle, registration) = AbortHandle::new_pair();
-    if let Ok(mut running) = state.running.lock() {
-        *running = Some(handle);
-    }
-    // Aborting drops the work wherever it is: an open model request is closed, and
-    // imports and reports are only ever moved into place once complete.
-    Abortable::new(report(&state, &request, &on_stage), registration)
-        .await
-        .unwrap_or_else(|_| Err(Error::Report("the report was cancelled".into())))
+    // Imports and reports are only moved into place once complete, so stopping anywhere is safe.
+    cancellable(&state.running, report(&state, &request, &on_stage)).await
 }
 
 /// Stops the report being generated, which then fails as cancelled.
 #[tauri::command]
 #[specta::specta]
 pub fn cancel_report(state: State<'_, AppState>) {
-    if let Some(handle) = state.running.lock().ok().and_then(|mut r| r.take()) {
+    cancel(&state.running);
+}
+
+/// Runs `work` so that `cancel(slot)` can stop it from another command: the
+/// future is dropped wherever it is, which also closes any open model request.
+async fn cancellable<T>(
+    slot: &Mutex<Option<AbortHandle>>,
+    work: impl Future<Output = Result<T>>,
+) -> Result<T> {
+    let (handle, registration) = AbortHandle::new_pair();
+    if let Ok(mut current) = slot.lock() {
+        *current = Some(handle);
+    }
+    Abortable::new(work, registration)
+        .await
+        .unwrap_or_else(|_| Err(Error::Io("cancelled".into())))
+}
+
+fn cancel(slot: &Mutex<Option<AbortHandle>>) {
+    if let Some(handle) = slot.lock().ok().and_then(|mut h| h.take()) {
         handle.abort();
     }
 }
@@ -243,6 +263,124 @@ async fn report(
     Ok(outcome)
 }
 
+/// Whether the library can search by meaning: Ollama must be running and have the model.
+#[derive(Debug, Clone, Copy, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum SearchModel {
+    Ready,
+    Missing,
+    Offline,
+}
+
+#[derive(Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct LibraryOverview {
+    pub status: LibraryStatus,
+    pub search_model: SearchModel,
+}
+
+/// The library's embedding model, if Ollama can run it now.
+async fn embedder(state: &AppState) -> (SearchModel, Option<OllamaEmbedder>) {
+    let Some(model) = state.catalog.models.embedding.first() else {
+        return (SearchModel::Offline, None);
+    };
+    match ollama::status(&state.http).await {
+        Ok(OllamaStatus::Running { models, .. }) => {
+            let installed = models
+                .iter()
+                .any(|m| m == &model.id || m.strip_suffix(":latest") == Some(&model.id));
+            if !installed {
+                return (SearchModel::Missing, None);
+            }
+            let embedder = OllamaEmbedder {
+                http: state.http.clone(),
+                model: model.id.clone(),
+                query_prefix: model.query_prefix.clone(),
+            };
+            (SearchModel::Ready, Some(embedder))
+        }
+        _ => (SearchModel::Offline, None),
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn library_status(state: State<'_, AppState>) -> Result<LibraryOverview> {
+    let (search_model, _) = embedder(&state).await;
+    Ok(LibraryOverview {
+        status: state.library.status().await?,
+        search_model,
+    })
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn set_library_folders(
+    state: State<'_, AppState>,
+    folders: Vec<String>,
+) -> Result<LibraryOverview> {
+    state.library.set_folders(&folders).await?;
+    library_status(state).await
+}
+
+/// Indexes what changed in the library folders since the last update.
+#[tauri::command]
+#[specta::specta]
+pub async fn update_library(
+    state: State<'_, AppState>,
+    on_progress: Channel<Progress>,
+) -> Result<UpdateSummary> {
+    let (_, embedder) = embedder(&state).await;
+    let work = state.library.update(
+        embedder
+            .as_ref()
+            .map(|e| e as &dyn crate::library::Embedder),
+        |p| drop(on_progress.send(p)),
+    );
+    cancellable(&state.indexing, work).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn cancel_library_update(state: State<'_, AppState>) {
+    cancel(&state.indexing);
+}
+
+/// Answers from the library's documents, citing the passages used.
+#[tauri::command]
+#[specta::specta]
+pub async fn ask_library(
+    state: State<'_, AppState>,
+    question: String,
+    language: String,
+) -> Result<Answer> {
+    let engine = state
+        .setup
+        .read()
+        .ok()
+        .and_then(|s| s.as_ref().map(|s| s.engine.clone()))
+        .ok_or_else(|| Error::Provider("Set up an AI engine first.".into()))?;
+    let model = EngineModel::new(state.http.clone(), engine)?;
+    let (_, embedder) = embedder(&state).await;
+    state
+        .library
+        .ask(
+            &model,
+            embedder
+                .as_ref()
+                .map(|e| e as &dyn crate::library::Embedder),
+            &question,
+            reports::language_name(&language),
+        )
+        .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn library_graph(state: State<'_, AppState>) -> Result<Graph> {
+    state.library.graph().await
+}
+
 /// The user's own report focuses and the one used last.
 #[tauri::command]
 #[specta::specta]
@@ -280,7 +418,8 @@ pub fn read_report(state: State<'_, AppState>, path: String) -> Result<String> {
     Ok(std::fs::read_to_string(&path)?)
 }
 
-/// Opens a file MCForge generated with its default app, or shows it in its folder.
+/// Opens a report MCForge generated or a library file with its default app, or
+/// shows it in its folder.
 #[tauri::command]
 #[specta::specta]
 pub fn open_file(
@@ -289,7 +428,7 @@ pub fn open_file(
     path: String,
     reveal: bool,
 ) -> Result<()> {
-    if !state.history.contains(Path::new(&path)) {
+    if !state.history.contains(Path::new(&path)) && !state.library.contains(&path) {
         return Err(unknown_file());
     }
     let opener = app.opener();
@@ -301,9 +440,9 @@ pub fn open_file(
     opened.map_err(|e| Error::Io(e.to_string()))
 }
 
-/// The UI can only reach files MCForge wrote itself, never arbitrary paths.
+/// The UI can only reach files MCForge wrote or indexed, never arbitrary paths.
 fn unknown_file() -> Error {
-    Error::Io("MCForge only opens files it generated".into())
+    Error::Io("MCForge only opens its reports and the files in your library".into())
 }
 
 fn engine_label(catalog: &Catalog, engine: &Engine) -> String {

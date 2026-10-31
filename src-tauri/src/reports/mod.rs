@@ -385,7 +385,8 @@ async fn plan_with_ai(
     ))
 }
 
-fn language_name(code: &str) -> &'static str {
+/// The English name of a UI language code, as prompts name it.
+pub(crate) fn language_name(code: &str) -> &'static str {
     match code.split(['-', '_']).next().unwrap_or(code) {
         "es" => "Spanish",
         "pt" => "Portuguese",

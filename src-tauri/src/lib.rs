@@ -4,6 +4,7 @@ mod commands;
 mod database;
 mod error;
 mod hardware;
+mod library;
 mod policy;
 mod providers;
 mod recommend;
@@ -18,6 +19,7 @@ use tauri::Manager;
 
 use crate::catalog::Catalog;
 use crate::commands::{AppState, Paths};
+use crate::library::Library;
 use crate::reports::Templates;
 use crate::reports::focus::Focuses;
 use crate::reports::history::History;
@@ -44,6 +46,12 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
         commands::list_reports,
         commands::read_report,
         commands::open_file,
+        commands::library_status,
+        commands::set_library_folders,
+        commands::update_library,
+        commands::cancel_library_update,
+        commands::ask_library,
+        commands::library_graph,
     ])
 }
 
@@ -73,6 +81,7 @@ pub fn run() {
                 cache: path.app_cache_dir()?,
                 history: path.app_data_dir()?.join("reports.json"),
                 focuses: path.app_data_dir()?.join("focus.json"),
+                library: path.app_data_dir()?.join("library.db"),
                 default_reports: path
                     .document_dir()
                     .or_else(|_| path.home_dir())?
@@ -82,6 +91,7 @@ pub fn run() {
                 setup: RwLock::new(setup::load(&paths.setup, &catalog)?),
                 history: History::load(paths.history.clone()),
                 focuses: Focuses::load(paths.focuses.clone()),
+                library: tauri::async_runtime::block_on(Library::open(&paths.library))?,
                 templates: Templates::load(&resources.join("templates/reports"))?,
                 catalog,
                 hardware: hardware::detect()?,
@@ -90,6 +100,7 @@ pub fn run() {
                     .build()?,
                 paths,
                 running: Mutex::new(None),
+                indexing: Mutex::new(None),
             });
             Ok(())
         })

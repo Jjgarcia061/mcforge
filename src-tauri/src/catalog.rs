@@ -183,6 +183,19 @@ pub struct FocusPreset {
 pub struct Models {
     pub local: Vec<LocalModel>,
     pub api: Vec<ApiModel>,
+    /// The first one is the library's; more are alternatives for later.
+    pub embedding: Vec<EmbeddingModel>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, specta::Type)]
+#[serde(deny_unknown_fields, rename_all(serialize = "camelCase"))]
+pub struct EmbeddingModel {
+    /// Ollama tag.
+    pub id: String,
+    pub name: String,
+    pub size_gb: f64,
+    #[serde(default)]
+    pub query_prefix: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, specta::Type)]
@@ -327,6 +340,10 @@ impl Catalog {
                     m.id
                 ));
             }
+        }
+
+        if self.models.embedding.is_empty() {
+            problems.push("models.toml declares no embedding model".into());
         }
 
         let mut focuses = HashSet::new();

@@ -98,6 +98,44 @@ pub async fn pull(
     Ok(())
 }
 
+/// Vectors for `inputs` from an embedding model, in the same order.
+pub async fn embed(
+    http: &reqwest::Client,
+    model: &str,
+    inputs: &[String],
+) -> Result<Vec<Vec<f32>>> {
+    #[derive(Deserialize)]
+    struct Embeddings {
+        embeddings: Vec<Vec<f32>>,
+    }
+    let res = http
+        .post(format!("{BASE}/api/embed"))
+        .json(&serde_json::json!({ "model": model, "input": inputs }))
+        .timeout(std::time::Duration::from_secs(300))
+        .send()
+        .await
+        .map_err(|e| {
+            if e.is_connect() {
+                Error::Provider("Ollama is not running. Open it and try again.".into())
+            } else {
+                e.into()
+            }
+        })?;
+    if !res.status().is_success() {
+        let body: String = res
+            .text()
+            .await
+            .unwrap_or_default()
+            .chars()
+            .take(300)
+            .collect();
+        return Err(Error::Provider(format!(
+            "Ollama could not embed the text: {body}"
+        )));
+    }
+    Ok(res.json::<Embeddings>().await?.embeddings)
+}
+
 /// GUI apps on macOS get a minimal PATH, so the usual install locations are checked too.
 fn is_installed() -> bool {
     let exe = if cfg!(windows) {

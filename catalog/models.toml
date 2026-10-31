@@ -72,6 +72,14 @@ params_b = 117.0
 size_gb = 65.0
 tools = "great"
 
+# The model that turns library passages into vectors, to search by meaning.
+# `query_prefix` is prepended to questions (not to passages), as the model expects.
+[[embedding]]
+id = "qwen3-embedding:0.6b"
+name = "Qwen3 Embedding 0.6B"
+size_gb = 0.64
+query_prefix = "Instruct: Given a question, retrieve passages from the user's documents that answer it\nQuery: "
+
 # API models shown as defaults. OpenAI's list is fetched live from /v1/models
 # once a key is validated, so only Anthropic defaults are pinned here.
 

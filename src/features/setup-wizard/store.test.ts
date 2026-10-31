@@ -36,7 +36,7 @@ const catalog: Catalog = {
     { id: "files", connectors: ["filesystem"] },
     { id: "custom", connectors: [] },
   ],
-  models: { local: [], api: [] },
+  models: { local: [], api: [], embedding: [] },
   focuses: [],
 };
 

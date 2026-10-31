@@ -32,13 +32,30 @@ export const commands = {
 	listReports: () => __TAURI_INVOKE<ReportEntry_Serialize[]>("list_reports"),
 	/**  A generated report's HTML, for the in-app viewer. */
 	readReport: (path: string) => typedError<string, AppError>(__TAURI_INVOKE("read_report", { path })),
-	/**  Opens a file MCForge generated with its default app, or shows it in its folder. */
+	/**
+	 *  Opens a report MCForge generated or a library file with its default app, or
+	 *  shows it in its folder.
+	 */
 	openFile: (path: string, reveal: boolean) => typedError<null, AppError>(__TAURI_INVOKE("open_file", { path, reveal })),
+	libraryStatus: () => typedError<LibraryOverview_Serialize, AppError>(__TAURI_INVOKE("library_status")),
+	setLibraryFolders: (folders: string[]) => typedError<LibraryOverview_Serialize, AppError>(__TAURI_INVOKE("set_library_folders", { folders })),
+	/**  Indexes what changed in the library folders since the last update. */
+	updateLibrary: (onProgress: Channel<Progress>) => typedError<UpdateSummary_Serialize, AppError>(__TAURI_INVOKE("update_library", { onProgress })),
+	cancelLibraryUpdate: () => __TAURI_INVOKE<void>("cancel_library_update"),
+	/**  Answers from the library's documents, citing the passages used. */
+	askLibrary: (question: string, language: string) => typedError<Answer, AppError>(__TAURI_INVOKE("ask_library", { question, language })),
+	libraryGraph: () => typedError<Graph, AppError>(__TAURI_INVOKE("library_graph")),
 };
 
 /* Types */
 /**  What can run model layers fast. Apple Silicon shares system memory with the GPU. */
 export type Accelerator = { kind: "appleSilicon" } | { kind: "nvidia"; name: string; vramGb: number | null } | { kind: "none" };
+
+export type Answer = {
+	/**  Cites sources as `[n]`; empty when nothing in the library matched. */
+	text: string,
+	sources: Source[],
+};
 
 export type ApiModel = ApiModel_Serialize | ApiModel_Deserialize;
 
@@ -84,6 +101,12 @@ export type Catalog_Serialize = {
 
 export type Category = "files" | "data" | "reports" | "web" | "development" | "apps";
 
+export type Cluster = {
+	/**  Its two most distinctive words; empty for a file on its own. */
+	label: string,
+	size: number,
+};
+
 export type ColumnKind = "integer" | "decimal" | "date" | "text";
 
 export type Connector = Connector_Serialize | Connector_Deserialize;
@@ -116,7 +139,40 @@ export type Connector_Serialize = {
 	testable: boolean,
 };
 
+export type Edge = {
+	/**  Indexes into `nodes`. */
+	source: number,
+	target: number,
+	weight: number | null,
+	kind: EdgeKind,
+};
+
+export type EdgeKind = "similar" | "link";
+
+export type EmbeddingModel = EmbeddingModel_Serialize | EmbeddingModel_Deserialize;
+
+export type EmbeddingModel_Deserialize = {
+	/**  Ollama tag. */
+	id: string,
+	name: string,
+	size_gb: number | null,
+	query_prefix?: string,
+};
+
+export type EmbeddingModel_Serialize = {
+	/**  Ollama tag. */
+	id: string,
+	name: string,
+	sizeGb: number | null,
+	queryPrefix: string,
+};
+
 export type Engine = { kind: "local"; model: string } | { kind: "api"; provider: Provider; model: string };
+
+export type FailedFile = {
+	path: string,
+	error: string,
+};
 
 export type Field = Field_Serialize | Field_Deserialize;
 
@@ -158,12 +214,54 @@ export type FocusPreset = {
 	instructions: string,
 };
 
+export type Graph = {
+	nodes: Node[],
+	edges: Edge[],
+	clusters: Cluster[],
+};
+
 export type Hardware = {
 	os: string,
 	cpu: string,
 	cores: number,
 	memoryGb: number | null,
 	accelerator: Accelerator,
+};
+
+export type LibraryOverview = LibraryOverview_Serialize | LibraryOverview_Deserialize;
+
+export type LibraryOverview_Deserialize = {
+	status: LibraryStatus_Deserialize,
+	searchModel: SearchModel,
+};
+
+export type LibraryOverview_Serialize = {
+	status: LibraryStatus_Serialize,
+	searchModel: SearchModel,
+};
+
+export type LibraryStatus = LibraryStatus_Serialize | LibraryStatus_Deserialize;
+
+export type LibraryStatus_Deserialize = {
+	folders: string[],
+	files: number,
+	chunks: number,
+	/**  Files with no readable text (scanned PDFs, damaged files). */
+	failed: number,
+	/**  RFC 3339, when the last update finished. */
+	updated?: string | null,
+	pending: Pending,
+};
+
+export type LibraryStatus_Serialize = {
+	folders: string[],
+	files: number,
+	chunks: number,
+	/**  Files with no readable text (scanned PDFs, damaged files). */
+	failed: number,
+	/**  RFC 3339, when the last update finished. */
+	updated: string | null,
+	pending: Pending,
 };
 
 export type LocalModel = LocalModel_Serialize | LocalModel_Deserialize;
@@ -191,11 +289,24 @@ export type Models = Models_Serialize | Models_Deserialize;
 export type Models_Deserialize = {
 	local: LocalModel_Deserialize[],
 	api: ApiModel_Deserialize[],
+	/**  The first one is the library's; more are alternatives for later. */
+	embedding: EmbeddingModel_Deserialize[],
 };
 
 export type Models_Serialize = {
 	local: LocalModel_Serialize[],
 	api: ApiModel_Serialize[],
+	/**  The first one is the library's; more are alternatives for later. */
+	embedding: EmbeddingModel_Serialize[],
+};
+
+export type Node = {
+	title: string,
+	path: string,
+	kind: string,
+	/**  Index into `clusters`. */
+	cluster: number,
+	degree: number,
 };
 
 /**  How the user's system writes numbers, e.g. `1,234.5` or `1.234,5`. */
@@ -220,7 +331,18 @@ export type Package_Serialize = {
 	env: { [key in string]: string },
 };
 
+/**  What an update would do now. */
+export type Pending = {
+	added: number,
+	changed: number,
+	removed: number,
+	/**  Passages still without a vector (indexed while the embedding model was unavailable). */
+	unembedded: number,
+};
+
 export type Permission = "allow" | "ask" | "deny";
+
+export type Progress = { phase: "scanning" } | { phase: "reading"; done: number; total: number; file: string } | { phase: "embedding"; done: number; total: number } | { phase: "mapping" };
 
 export type Provider = "anthropic" | "openai";
 
@@ -355,6 +477,9 @@ export type SavedFocuses_Serialize = {
 	last: string | null,
 };
 
+/**  Whether the library can search by meaning: Ollama must be running and have the model. */
+export type SearchModel = "ready" | "missing" | "offline";
+
 /**  How the MCP server is started. `{{field}}` placeholders are filled from user input. */
 export type Server = Server_Serialize | Server_Deserialize;
 
@@ -388,6 +513,13 @@ export type Setup_Serialize = {
 	connectors: string[],
 	values: { [key in string]: { [key in string]: FieldValue } },
 	permissions: { [key in string]: { [key in string]: Permission } },
+};
+
+export type Source = {
+	n: number,
+	title: string,
+	path: string,
+	excerpt: string,
 };
 
 export type SourceColumn = {
@@ -450,6 +582,28 @@ export type Tool_Serialize = {
 	risk: Risk,
 	/**  Derived from `risk` at load time; never written in manifests. */
 	defaultPermission: Permission,
+};
+
+export type UpdateSummary = UpdateSummary_Serialize | UpdateSummary_Deserialize;
+
+export type UpdateSummary_Deserialize = {
+	added: number,
+	changed: number,
+	removed: number,
+	/**  Files that could not be read, with the reason. */
+	failed: FailedFile[],
+	/**  Why search by meaning is not up to date, if it is not. */
+	embedError?: string | null,
+};
+
+export type UpdateSummary_Serialize = {
+	added: number,
+	changed: number,
+	removed: number,
+	/**  Files that could not be read, with the reason. */
+	failed: FailedFile[],
+	/**  Why search by meaning is not up to date, if it is not. */
+	embedError: string | null,
 };
 
 export type UseCase = {

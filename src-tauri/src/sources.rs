@@ -379,7 +379,7 @@ fn tabulate(
 
 /// UTF-8 or UTF-16 when a BOM says so or the bytes are valid UTF-8; otherwise
 /// Windows-1252, which is what Excel writes on most Western-language systems.
-fn decode(bytes: &[u8]) -> (Cow<'_, str>, &'static str) {
+pub(crate) fn decode(bytes: &[u8]) -> (Cow<'_, str>, &'static str) {
     if let Some((enc, bom)) = encoding_rs::Encoding::for_bom(bytes) {
         return (enc.decode_without_bom_handling(&bytes[bom..]).0, enc.name());
     }

@@ -11,6 +11,7 @@ React UI (src/)  ──  typed IPC (src/lib/bindings.ts, generated)  ──  Rus
                                                                        ├─ database   built-in PostgreSQL / MySQL / SQLite connector
                                                                        ├─ sources    CSV and spreadsheet files → cached read-only SQLite tables
                                                                        ├─ reports    plan → query → explain → render (MiniJinja + SVG charts)
+                                                                       ├─ library    folders → passages, full-text + vector search, answers with citations, file map
                                                                        ├─ setup      saved setup (JSON) with secrets in the keychain
                                                                        ├─ policy     allow / ask / deny gate
                                                                        ├─ secrets    OS keychain
@@ -38,6 +39,18 @@ React UI (src/)  ──  typed IPC (src/lib/bindings.ts, generated)  ──  Rus
 ## Reports
 
 `inspect_source` imports a CSV file or a workbook sheet (or reuses its cached import) and describes its columns. `generate_report` streams its stages over a Tauri channel while it plans, queries, explains and renders; see [report-templates.md](report-templates.md). `cancel_report` stops it at any stage: the request to the model is closed and no file is left behind, because imports and reports are only moved into place once complete. The AI's SQL runs through the same read-only `Database` as the database connector, so a model that writes `DELETE` gets an error, not a deletion. Every report is added to a history (`reports.json` in the app data folder, newest first, at most 200) that `list_reports` returns. Reports are shown in an in-app viewer (`read_report`, rendered in a sandboxed iframe where no script runs); `read_report` and `open_file` only accept files listed there, so the UI cannot be used to read or open arbitrary paths.
+
+## Library
+
+The library indexes folders the user picks (`.md`, `.txt`, `.html`, `.docx`, `.pdf`) into `library.db` in the app data folder; it never writes to those folders.
+
+- **Update.** `library_status` compares the folders with the index (size and date only, so it is cheap) and reports new, changed and removed files. `update_library` reads only those, splits their text into ~1 200-character passages with some overlap, and stores each file in one transaction, so `cancel_library_update` can stop it at any point. A file whose content hash did not change keeps its passages.
+- **Search.** Passages are searchable by words at once (SQLite FTS5, accent-insensitive). When Ollama has the embedding model from `catalog/models.toml`, they also get vectors and search becomes hybrid: both rankings are fused (reciprocal rank fusion). Passages indexed while the model was unavailable are embedded on the next update; a different model re-embeds everything.
+- **Answers.** `ask_library` gives the model the best passages, numbered, and asks for an answer that cites them as `[n]`; citations to anything else are dropped.
+- **Map.** After each update, `graph.rs` links every file to its closest files (by vector, or by shared words without one) and to the files it links in Markdown (`[[Note]]`, `[text](file.md)`), then groups them into topics with Louvain, named after their most distinctive words. `library_graph` returns it.
+- `open_file` also opens indexed files; anything else is refused.
+
+The PDF parser can panic on documents it does not support. Releases unwind instead of aborting so that `catch_unwind` turns that into one unreadable file rather than a crash.
 
 ## Database connector
 

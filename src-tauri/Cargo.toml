@@ -34,8 +34,13 @@ encoding_rs = { version = "0.8.44", default-features = false }
 minijinja = { version = "3.0.5", default-features = false, features = ["builtins", "macros", "serde", "std_collections"] }
 chrono = { version = "0.4.45", default-features = false, features = ["clock", "std"] }
 calamine = { version = "0.37", features = ["dates"] }
+pdf-extract = "0.12"
+sha2 = "0.10"
+quick-xml = "0.42"
+zip = { version = "9", default-features = false, features = ["deflate"] }
 
 [dev-dependencies]
+lopdf = "0.42"
 rust_xlsxwriter = { version = "0.102", default-features = false }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
@@ -43,5 +48,6 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 codegen-units = 1
 lto = true
 opt-level = 3
-panic = "abort"
+# Unwinding (the default) lets a parser panic on one odd file be caught
+# instead of closing the app; see `library::extract`.
 strip = true
