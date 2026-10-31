@@ -37,7 +37,7 @@ React UI (src/)  ──  typed IPC (src/lib/bindings.ts, generated)  ──  Rus
 
 ## Reports
 
-`inspect_source` imports a CSV file or a workbook sheet (or reuses its cached import) and describes its columns. `generate_report` streams its stages over a Tauri channel while it plans, queries, explains and renders; see [report-templates.md](report-templates.md). The AI's SQL runs through the same read-only `Database` as the database connector, so a model that writes `DELETE` gets an error, not a deletion. Every report is added to a history (`reports.json` in the app data folder, newest first, at most 200) that `list_reports` returns; `open_report` only opens files listed there, so the UI cannot be used to open arbitrary paths.
+`inspect_source` imports a CSV file or a workbook sheet (or reuses its cached import) and describes its columns. `generate_report` streams its stages over a Tauri channel while it plans, queries, explains and renders; see [report-templates.md](report-templates.md). `cancel_report` stops it at any stage: the request to the model is closed and no file is left behind, because imports and reports are only moved into place once complete. The AI's SQL runs through the same read-only `Database` as the database connector, so a model that writes `DELETE` gets an error, not a deletion. Every report is added to a history (`reports.json` in the app data folder, newest first, at most 200) that `list_reports` returns; `open_report` only opens files listed there, so the UI cannot be used to open arbitrary paths.
 
 ## Database connector
 

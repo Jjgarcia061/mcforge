@@ -641,6 +641,20 @@ mod tests {
         }
     }
 
+    /// A model that never answers, like a local model stuck on a long prompt.
+    struct Stuck;
+
+    impl Model for Stuck {
+        fn json<'a>(
+            &'a self,
+            _: &'a str,
+            _: &'a str,
+            _: &'a Value,
+        ) -> BoxFuture<'a, Result<Value>> {
+            Box::pin(std::future::pending())
+        }
+    }
+
     fn templates() -> Templates {
         Templates::load(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../templates/reports"))
             .unwrap()
@@ -831,6 +845,28 @@ mod tests {
         let db = source.open().await.unwrap();
         let rows = db.query("SELECT COUNT(*) FROM ventas").await.unwrap();
         assert_eq!(rows.rows[0][0], json!(6), "the DELETE never ran");
+        std::fs::remove_dir_all(dir).ok();
+    }
+
+    #[tokio::test]
+    async fn a_cancelled_report_stops_waiting_and_writes_nothing() {
+        use futures_util::future::{AbortHandle, Abortable};
+        let dir = std::env::temp_dir().join(format!("mcforge-report-abort-{}", std::process::id()));
+        let source = sales(&dir).await;
+        let out = dir.join("out");
+        let (handle, registration) = AbortHandle::new_pair();
+        let (templates, request) = (templates(), request(true, None));
+        let ai = Ai {
+            model: &Stuck,
+            label: "x",
+        };
+        let work = generate(&templates, &source, Some(ai), &request, &out, |stage| {
+            if matches!(stage, ReportStage::Planning) {
+                handle.abort();
+            }
+        });
+        assert!(Abortable::new(work, registration).await.is_err());
+        assert!(!out.exists(), "no report file is left behind");
         std::fs::remove_dir_all(dir).ok();
     }
 

@@ -21,6 +21,8 @@ export const commands = {
 	/**  Imports a CSV file or a workbook sheet (or reuses its cached import) and describes its columns. */
 	inspectSource: (path: string, sheet: string | null) => typedError<SourceSummary, AppError>(__TAURI_INVOKE("inspect_source", { path, sheet })),
 	generateReport: (request: ReportRequest_Deserialize, onStage: Channel<ReportStage>) => typedError<ReportOutcome_Serialize, AppError>(__TAURI_INVOKE("generate_report", { request, onStage })),
+	/**  Stops the report being generated, which then fails as cancelled. */
+	cancelReport: () => __TAURI_INVOKE<void>("cancel_report"),
 	/**  Reports generated on this computer whose files still exist, newest first. */
 	listReports: () => __TAURI_INVOKE<ReportEntry_Serialize[]>("list_reports"),
 	/**  Opens a report MCForge generated, or shows it in its folder. */

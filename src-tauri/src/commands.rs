@@ -1,8 +1,9 @@
 //! The only surface the UI can call. Each command is a thin adapter over a core module.
 
 use std::path::{Path, PathBuf};
-use std::sync::RwLock;
+use std::sync::{Mutex, RwLock};
 
+use futures_util::future::{AbortHandle, Abortable};
 use serde::Serialize;
 use tauri::State;
 use tauri::ipc::Channel;
@@ -32,6 +33,8 @@ pub struct AppState {
     pub paths: Paths,
     pub setup: RwLock<Option<Setup>>,
     pub history: History,
+    /// The report being generated, so `cancel_report` can stop it.
+    pub running: Mutex<Option<AbortHandle>>,
 }
 
 pub struct Paths {
@@ -172,6 +175,31 @@ pub async fn generate_report(
     request: ReportRequest,
     on_stage: Channel<ReportStage>,
 ) -> Result<ReportOutcome> {
+    let (handle, registration) = AbortHandle::new_pair();
+    if let Ok(mut running) = state.running.lock() {
+        *running = Some(handle);
+    }
+    // Aborting drops the work wherever it is: an open model request is closed, and
+    // imports and reports are only ever moved into place once complete.
+    Abortable::new(report(&state, &request, &on_stage), registration)
+        .await
+        .unwrap_or_else(|_| Err(Error::Report("the report was cancelled".into())))
+}
+
+/// Stops the report being generated, which then fails as cancelled.
+#[tauri::command]
+#[specta::specta]
+pub fn cancel_report(state: State<'_, AppState>) {
+    if let Some(handle) = state.running.lock().ok().and_then(|mut r| r.take()) {
+        handle.abort();
+    }
+}
+
+async fn report(
+    state: &AppState,
+    request: &ReportRequest,
+    on_stage: &Channel<ReportStage>,
+) -> Result<ReportOutcome> {
     let stage = |s| drop(on_stage.send(s));
     stage(ReportStage::Reading);
     let source = FileSource::import(
@@ -201,7 +229,7 @@ pub async fn generate_report(
     });
 
     let outcome =
-        reports::generate(&state.templates, &source, ai, &request, &out_dir, stage).await?;
+        reports::generate(&state.templates, &source, ai, request, &out_dir, stage).await?;
     // The report is written either way; a history that cannot be saved only forgets it on restart.
     let _ = state
         .history

@@ -212,6 +212,8 @@
     "noEngine": "Sin un motor de IA el reporte se arma con reglas automáticas y no lleva conclusiones escritas.",
     "generate": "Generar reporte",
     "generating": "Generando…",
+    "cancel": "Cancelar",
+    "cancelled": "Cancelaste el reporte. Puedes ajustar la pregunta y generarlo de nuevo.",
     "stage": {
       "reading": "Leyendo los datos",
       "planning": "La IA está planeando los análisis",

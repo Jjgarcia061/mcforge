@@ -12,7 +12,7 @@ mod secrets;
 mod setup;
 mod sources;
 
-use std::sync::RwLock;
+use std::sync::{Mutex, RwLock};
 
 use tauri::Manager;
 
@@ -36,6 +36,7 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
         commands::list_templates,
         commands::inspect_source,
         commands::generate_report,
+        commands::cancel_report,
         commands::list_reports,
         commands::open_report,
     ])
@@ -81,6 +82,7 @@ pub fn run() {
                     .user_agent(concat!("MCForge/", env!("CARGO_PKG_VERSION")))
                     .build()?,
                 paths,
+                running: Mutex::new(None),
             });
             Ok(())
         })

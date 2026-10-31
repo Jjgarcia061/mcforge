@@ -35,7 +35,7 @@ function numberFormat(locale?: string): NumberFormat {
   };
 }
 
-type Run = { stage: ReportStage } | { outcome: ReportOutcome } | { error: string };
+type Run = { stage: ReportStage } | { outcome: ReportOutcome } | { error: string } | { cancelled: true };
 
 export function ReportsView() {
   const { t, i18n } = useTranslation();
@@ -55,6 +55,8 @@ export function ReportsView() {
   const ai = useAi && engine !== undefined;
   const busy = run !== null && "stage" in run;
   const progress = useRef<HTMLDivElement>(null);
+  // Set by the Cancel button, so the failure that follows reads as a cancellation.
+  const cancelling = useRef(false);
   const runKind = run && Object.keys(run)[0];
 
   // Keep the progress and the result in view: they appear below the form.
@@ -109,6 +111,7 @@ export function ReportsView() {
     let finished = false;
     const channel = new Channel<ReportStage>();
     channel.onmessage = (stage) => !finished && setRun({ stage });
+    cancelling.current = false;
     setRun({ stage: "reading" });
     try {
       const outcome = await unwrap(
@@ -131,8 +134,13 @@ export function ReportsView() {
       void commands.listReports().then(setHistory);
     } catch (e) {
       finished = true;
-      setRun({ error: errorMessage(e) });
+      setRun(cancelling.current ? { cancelled: true } : { error: errorMessage(e) });
     }
+  }
+
+  function cancel() {
+    cancelling.current = true;
+    void commands.cancelReport();
   }
 
   async function openReport(path: string, reveal: boolean) {
@@ -223,6 +231,11 @@ export function ReportsView() {
           {busy && <Spinner />}
           {t(busy ? "reports.generating" : "reports.generate")}
         </Button>
+        {busy && (
+          <Button variant="secondary" onClick={cancel}>
+            {t("reports.cancel")}
+          </Button>
+        )}
         {templates.length === 1 && templates[0] && (
           <span className="text-xs text-zinc-500">{t("reports.usingTemplate", { name: templates[0].name })}</span>
         )}
@@ -236,6 +249,7 @@ export function ReportsView() {
             <div className="mt-1">{run.error}</div>
           </Notice>
         )}
+        {run && "cancelled" in run && <Notice>{t("reports.cancelled")}</Notice>}
         {run && "outcome" in run && (
           <Result outcome={run.outcome} onOpen={(reveal) => void openReport(run.outcome.path, reveal)} />
         )}

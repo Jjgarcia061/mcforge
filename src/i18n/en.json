@@ -212,6 +212,8 @@
     "noEngine": "Without an AI engine the report is built with automatic rules and has no written conclusions.",
     "generate": "Generate report",
     "generating": "Generating…",
+    "cancel": "Cancel",
+    "cancelled": "You cancelled the report. You can adjust the question and generate it again.",
     "stage": {
       "reading": "Reading the data",
       "planning": "The AI is planning the analyses",
