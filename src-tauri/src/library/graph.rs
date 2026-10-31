@@ -14,7 +14,7 @@ use super::search::{dot, normalized, terms};
 const NEIGHBOURS: usize = 4;
 /// Below these similarities two files are not considered related.
 const MIN_SEMANTIC: f32 = 0.5;
-const MIN_WORDS: f32 = 0.1;
+const MIN_WORDS: f32 = 0.06;
 /// Words kept per file for the word-based similarity and the topic names.
 const TOP_TERMS: usize = 64;
 const MAX_TEXT_BYTES: usize = 40_000;

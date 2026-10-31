@@ -802,6 +802,60 @@ mod tests {
         std::fs::remove_dir_all(dir).ok();
     }
 
+    /// Indexes a real folder and asks a real local model.
+    /// `MCFORGE_TEST_LIBRARY=dir MCFORGE_TEST_OLLAMA_MODEL=qwen3:8b cargo test real_library -- --ignored --nocapture`
+    /// (optionally `MCFORGE_TEST_EMBEDDING=qwen3-embedding:0.6b` and `MCFORGE_TEST_QUESTION`).
+    #[tokio::test]
+    #[ignore = "needs Ollama and a folder of documents"]
+    async fn real_library() {
+        let (Ok(folder), Ok(model)) = (
+            std::env::var("MCFORGE_TEST_LIBRARY"),
+            std::env::var("MCFORGE_TEST_OLLAMA_MODEL"),
+        ) else {
+            panic!("set MCFORGE_TEST_LIBRARY and MCFORGE_TEST_OLLAMA_MODEL");
+        };
+        let dir = std::env::temp_dir().join(format!("mcforge-real-library-{}", std::process::id()));
+        let library = Library::open(&dir.join("library.db")).await.unwrap();
+        library.set_folders(&[folder]).await.unwrap();
+        let embedder = std::env::var("MCFORGE_TEST_EMBEDDING")
+            .ok()
+            .map(|model| OllamaEmbedder {
+                http: reqwest::Client::new(),
+                model,
+                query_prefix: String::new(),
+            });
+        let embedder = embedder.as_ref().map(|e| e as &dyn Embedder);
+        let started = std::time::Instant::now();
+        let summary = library.update(embedder, |_| {}).await.unwrap();
+        eprintln!("{:.1}s {summary:#?}", started.elapsed().as_secs_f64());
+        let graph = library.graph().await.unwrap();
+        for (i, c) in graph.clusters.iter().enumerate() {
+            let files: Vec<&str> = graph
+                .nodes
+                .iter()
+                .filter(|n| n.cluster == i as u32)
+                .map(|n| n.title.as_str())
+                .collect();
+            eprintln!("topic {i} \"{}\": {files:?}", c.label);
+        }
+        eprintln!("{} edges", graph.edges.len());
+        let question = std::env::var("MCFORGE_TEST_QUESTION").unwrap_or_else(|_| {
+            "¿Cuál es el descuento máximo que puede autorizar un vendedor?".into()
+        });
+        let engine = crate::providers::chat::EngineModel::new(
+            reqwest::Client::new(),
+            crate::setup::Engine::Local { model },
+        )
+        .unwrap();
+        let started = std::time::Instant::now();
+        let answer = library
+            .ask(&engine, embedder, &question, "Spanish")
+            .await
+            .unwrap();
+        eprintln!("{:.1}s {answer:#?}", started.elapsed().as_secs_f64());
+        std::fs::remove_dir_all(dir).ok();
+    }
+
     #[test]
     fn citation_markers_are_read_in_order() {
         assert_eq!(cited_in("Uno [2]. Dos [1, 3][4]. Nota [a]."), [2, 1, 3, 4]);

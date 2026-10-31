@@ -8,9 +8,10 @@ MCForge is an open-source desktop app (Windows, macOS, Linux) that walks you thr
 2. **Pick your engine**: a local model (via [Ollama](https://ollama.com)) or an API (Anthropic, OpenAI).
 3. **Pick what you need**: files, databases, web, Git, reports… from a growing catalog.
 4. **Decide what the AI may do**: every tool is allowed, asks first, or is blocked. MCForge enforces it — not the prompt.
-5. **Generate reports**: pick a CSV or Excel file and ask a question. The AI plans the analysis as read-only SQL and writes the conclusions; MCForge runs the queries, draws the charts and renders the document from a template, so every figure comes straight from the data.
+5. **Generate reports**: pick a CSV or Excel file and ask a question. The AI plans the analysis as read-only SQL and writes the conclusions; MCForge runs the queries, draws the charts and renders the document from a template, so every figure comes straight from the data. Choose who the report is for (finance, sales, your own focus…) and read it inside the app.
+6. **Build your library**: point MCForge at your document folders (PDF, Word, Markdown, text). It indexes them locally, answers questions citing the passages it used, feeds the relevant ones to your reports, and draws them as a map of topics that grows into the shape of a brain.
 
-> Status: early development (v0.1). The setup wizard and reports from CSV and Excel files work; chat, the MCP host and PDF / Excel / Word output are next.
+> Status: early development (v0.1). The setup wizard, reports from CSV and Excel files and the document library work; chat, the MCP host and PDF / Excel / Word output are next.
 
 ## Why
 
@@ -41,6 +42,13 @@ To tune the report prompts against a real local model:
 ```bash
 MCFORGE_TEST_OLLAMA_MODEL=qwen3:8b MCFORGE_TEST_CSV=path/to/file.csv \
   cargo test --manifest-path src-tauri/Cargo.toml real_local_model -- --ignored --nocapture
+```
+
+And the library against a real folder (add `MCFORGE_TEST_EMBEDDING=qwen3-embedding:0.6b` to search by meaning):
+
+```bash
+MCFORGE_TEST_OLLAMA_MODEL=qwen3:8b MCFORGE_TEST_LIBRARY=path/to/folder \
+  cargo test --manifest-path src-tauri/Cargo.toml real_library -- --ignored --nocapture
 ```
 
 The `lab/` folder is git-ignored: use it for experiments and local secrets, then move what works into the project with a test.
