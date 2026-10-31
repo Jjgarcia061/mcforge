@@ -1,5 +1,6 @@
 mod atomic;
 mod catalog;
+mod chat;
 mod commands;
 mod database;
 mod error;
@@ -13,11 +14,14 @@ mod secrets;
 mod setup;
 mod sources;
 
+use std::collections::HashMap;
 use std::sync::{Mutex, RwLock};
 
 use tauri::Manager;
 
+use crate::atomic::Stored;
 use crate::catalog::Catalog;
+use crate::chat::store::Chats;
 use crate::commands::{AppState, Paths};
 use crate::library::Library;
 use crate::reports::Templates;
@@ -52,6 +56,12 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
         commands::cancel_library_update,
         commands::ask_library,
         commands::library_graph,
+        commands::list_chats,
+        commands::load_chat,
+        commands::delete_chat,
+        commands::send_message,
+        commands::answer_approval,
+        commands::stop_chat,
     ])
 }
 
@@ -82,6 +92,8 @@ pub fn run() {
                 history: path.app_data_dir()?.join("reports.json"),
                 focuses: path.app_data_dir()?.join("focus.json"),
                 library: path.app_data_dir()?.join("library.db"),
+                chats: path.app_data_dir()?.join("chats"),
+                activity: path.app_data_dir()?.join("activity.json"),
                 default_reports: path
                     .document_dir()
                     .or_else(|_| path.home_dir())?
@@ -91,6 +103,8 @@ pub fn run() {
                 setup: RwLock::new(setup::load(&paths.setup, &catalog)?),
                 history: History::load(paths.history.clone()),
                 focuses: Focuses::load(paths.focuses.clone()),
+                chats: Chats::new(paths.chats.clone()),
+                activity: Stored::load(paths.activity.clone()),
                 library: tauri::async_runtime::block_on(Library::open(&paths.library))?,
                 templates: Templates::load(&resources.join("templates/reports"))?,
                 catalog,
@@ -101,6 +115,8 @@ pub fn run() {
                 paths,
                 running: Mutex::new(None),
                 indexing: Mutex::new(None),
+                approvals: Mutex::new(HashMap::new()),
+                chatting: Mutex::new(None),
             });
             Ok(())
         })

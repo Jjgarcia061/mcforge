@@ -166,6 +166,11 @@ impl Library {
         })
     }
 
+    /// Indexed documents with readable text.
+    pub async fn documents(&self) -> Result<u32> {
+        Ok(self.index.counts().await?.files)
+    }
+
     pub fn contains(&self, path: &str) -> bool {
         self.known.read().is_ok_and(|k| k.contains(path))
     }

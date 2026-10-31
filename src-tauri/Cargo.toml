@@ -17,7 +17,7 @@ tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"
 tauri-specta = { version = "=2.0.0-rc.26", features = ["derive", "typescript"] }
-specta = { version = "=2.0.0-rc.26", features = ["derive"] }
+specta = { version = "=2.0.0-rc.26", features = ["derive", "serde_json"] }
 specta-typescript = "=0.0.13"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -28,7 +28,7 @@ reqwest = { version = "0.13", features = ["json", "stream"] }
 futures-util = "0.3"
 keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust"] }
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "tls-rustls-ring-webpki", "postgres", "mysql", "mysql-rsa", "sqlite", "chrono", "json", "rust_decimal", "uuid"] }
-tokio = { version = "1", features = ["rt", "time"] }
+tokio = { version = "1", features = ["rt", "sync", "time"] }
 csv = { version = "1.4.0", default-features = false }
 encoding_rs = { version = "0.8.44", default-features = false }
 minijinja = { version = "3.0.5", default-features = false, features = ["builtins", "macros", "serde", "std_collections"] }

@@ -1,5 +1,5 @@
-//! One-shot structured answers from the engine chosen in the setup. Reports
-//! use it today; the chat (F1) adds streaming and tool calls on the same requests.
+//! One-shot structured answers from the engine chosen in the setup, for reports
+//! and library answers. `stream.rs` adds streaming and tool calls for the chat.
 
 use std::time::Duration;
 
@@ -12,10 +12,10 @@ use crate::secrets;
 use crate::setup::Engine;
 
 /// Local models can take minutes on modest hardware.
-const TIMEOUT: Duration = Duration::from_secs(600);
+pub(super) const TIMEOUT: Duration = Duration::from_secs(600);
 /// Ollama's default context is small enough to silently cut a data summary.
-const LOCAL_CONTEXT: u32 = 16_384;
-const MAX_TOKENS: u32 = 8_192;
+pub(super) const LOCAL_CONTEXT: u32 = 16_384;
+pub(super) const MAX_TOKENS: u32 = 8_192;
 const ANSWER_TOOL: &str = "answer";
 
 /// Anything that answers a prompt with JSON matching a schema.
@@ -29,9 +29,9 @@ pub trait Model: Send + Sync {
 }
 
 pub struct EngineModel {
-    http: reqwest::Client,
-    engine: Engine,
-    key: String,
+    pub(super) http: reqwest::Client,
+    pub(super) engine: Engine,
+    pub(super) key: String,
 }
 
 impl EngineModel {
@@ -150,7 +150,7 @@ impl Model for EngineModel {
 }
 
 /// The provider's own error message when it sent one.
-fn failure(status: reqwest::StatusCode, body: &str) -> String {
+pub(super) fn failure(status: reqwest::StatusCode, body: &str) -> String {
     if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
         return "The API key was rejected.".into();
     }

@@ -1,22 +1,29 @@
 //! The only surface the UI can call. Each command is a thin adapter over a core module.
 
+use std::collections::HashMap;
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, RwLock};
 
-use futures_util::future::{AbortHandle, Abortable};
-use serde::Serialize;
+use futures_util::future::{AbortHandle, Abortable, BoxFuture};
+use serde::{Deserialize, Serialize};
 use tauri::State;
 use tauri::ipc::Channel;
 use tauri_plugin_opener::OpenerExt;
+use tokio::sync::oneshot;
 
+use crate::atomic::Stored;
 use crate::catalog::{BuiltinModule, Catalog, Server, TestReport, Values};
-use crate::database;
+use crate::chat::store::{Chat, ChatSummary, Chats};
+use crate::chat::tools::{Attachment, Builtin, ReportTool};
+use crate::chat::{self, Activity, Approval, ChatEvent, Host};
+use crate::database::{self, Driver};
 use crate::error::{Error, Result};
 use crate::hardware::Hardware;
 use crate::library::{
     Answer, Embedder, Graph, Library, LibraryStatus, OllamaEmbedder, Progress, UpdateSummary,
 };
+use crate::policy::Permission;
 use crate::providers::chat::EngineModel;
 use crate::providers::ollama::{self, OllamaStatus, PullProgress};
 use crate::providers::{self, Provider};
@@ -24,7 +31,8 @@ use crate::recommend::{self, Recommendation};
 use crate::reports::focus::{Focus, Focuses, SavedFocuses};
 use crate::reports::history::{History, ReportEntry};
 use crate::reports::{
-    self, Ai, ReportOutcome, ReportRequest, ReportStage, Snippet, TemplateInfo, Templates,
+    self, Ai, NumberFormat, ReportOutcome, ReportRequest, ReportStage, Snippet, TemplateInfo,
+    Templates,
 };
 use crate::secrets;
 use crate::setup::{self, Engine, Setup};
@@ -44,6 +52,13 @@ pub struct AppState {
     pub running: Mutex<Option<AbortHandle>>,
     /// The library update in progress, so `cancel_library_update` can stop it.
     pub indexing: Mutex<Option<AbortHandle>>,
+    pub chats: Chats,
+    /// Every tool call made from a conversation, newest last.
+    pub activity: Stored<Vec<Activity>>,
+    /// Tool calls waiting for the user's answer, by call id.
+    pub approvals: Mutex<HashMap<String, oneshot::Sender<Approval>>>,
+    /// The conversation turn in progress, so `stop_chat` can stop it.
+    pub chatting: Mutex<Option<AbortHandle>>,
 }
 
 pub struct Paths {
@@ -52,6 +67,8 @@ pub struct Paths {
     pub history: PathBuf,
     pub focuses: PathBuf,
     pub library: PathBuf,
+    pub chats: PathBuf,
+    pub activity: PathBuf,
     /// Where reports go unless the `reports` connector says otherwise.
     pub default_reports: PathBuf,
 }
@@ -505,5 +522,224 @@ fn engine_label(catalog: &Catalog, engine: &Engine) -> String {
             .iter()
             .find(|m| &m.id == model)
             .map_or_else(|| model.clone(), |m| m.name.clone()),
+    }
+}
+
+/// Entries kept in the activity log.
+const MAX_ACTIVITY: usize = 1000;
+
+#[derive(Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatContext {
+    pub language: String,
+    pub number_format: NumberFormat,
+    /// Preset report focus names in the user's language, by id.
+    pub focus_names: HashMap<String, String>,
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn list_chats(state: State<'_, AppState>) -> Vec<ChatSummary> {
+    state.chats.list()
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn load_chat(state: State<'_, AppState>, id: String) -> Result<Chat> {
+    state.chats.load(&id)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn delete_chat(state: State<'_, AppState>, id: String) -> Result<()> {
+    state.chats.delete(&id)
+}
+
+/// Asks the engine in a conversation (a new one without `chat_id`) and streams
+/// the answer. The conversation is saved before and after, also when stopped.
+#[tauri::command]
+#[specta::specta]
+pub async fn send_message(
+    state: State<'_, AppState>,
+    chat_id: Option<String>,
+    text: String,
+    attachments: Vec<Attachment>,
+    context: ChatContext,
+    on_event: Channel<ChatEvent>,
+) -> Result<Chat> {
+    let mut chat = match &chat_id {
+        Some(id) => state.chats.load(id)?,
+        None => Chat::new(&text),
+    };
+    for a in attachments {
+        if !chat
+            .attachments
+            .iter()
+            .any(|x| x.path == a.path && x.sheet == a.sheet)
+        {
+            chat.attachments.push(a);
+        }
+    }
+    chat.ask(&text);
+    state.chats.save(&chat)?;
+    if let Ok(mut pending) = state.approvals.lock() {
+        pending.clear();
+    }
+    let outcome = cancellable(
+        &state.chatting,
+        converse(&state, &mut chat, &context, &on_event),
+    )
+    .await;
+    chat::repair(&mut chat.messages);
+    chat.updated = chrono::Local::now().to_rfc3339();
+    state.chats.save(&chat)?;
+    outcome.map(|()| chat)
+}
+
+/// The user's answer to a tool call the rules ask about.
+#[tauri::command]
+#[specta::specta]
+pub fn answer_approval(state: State<'_, AppState>, id: String, approval: Approval) {
+    if let Some(waiting) = state.approvals.lock().ok().and_then(|mut p| p.remove(&id)) {
+        let _ = waiting.send(approval);
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn stop_chat(state: State<'_, AppState>) {
+    cancel(&state.chatting);
+}
+
+/// One turn with the tools the user set up.
+async fn converse(
+    state: &AppState,
+    chat: &mut Chat,
+    context: &ChatContext,
+    on_event: &Channel<ChatEvent>,
+) -> Result<()> {
+    let setup = state
+        .setup
+        .read()
+        .ok()
+        .and_then(|s| s.clone())
+        .ok_or_else(|| Error::Provider("Set up an AI engine first.".into()))?;
+    let model = EngineModel::new(state.http.clone(), setup.engine.clone())?;
+    let label = engine_label(&state.catalog, &setup.engine);
+    let (_, embedder) = embedder(state).await;
+    let library = (state.library.documents().await? > 0).then_some((
+        &state.library,
+        embedder.as_ref().map(|e| e as &dyn Embedder),
+    ));
+    let selected = |id: &str| setup.connectors.iter().any(|c| c == id);
+    let database = selected("database")
+        .then(|| {
+            let driver: Driver = setup.text("database", "driver")?.parse().ok()?;
+            Some((driver, setup.text("database", "url")?.to_owned()))
+        })
+        .flatten();
+    let reports = selected("reports").then(|| {
+        let presets = state.catalog.focuses.iter().map(|p| Focus {
+            id: p.id.clone(),
+            name: context
+                .focus_names
+                .get(&p.id)
+                .cloned()
+                .unwrap_or_else(|| p.id.clone()),
+            instructions: p.instructions.clone(),
+        });
+        ReportTool {
+            templates: &state.templates,
+            history: &state.history,
+            cache: &state.paths.cache,
+            out_dir: setup
+                .text("reports", "output_dir")
+                .map_or_else(|| state.paths.default_reports.clone(), PathBuf::from),
+            model: &model,
+            label: &label,
+            attachments: &chat.attachments,
+            focuses: presets.chain(state.focuses.saved().custom).collect(),
+            language: context.language.clone(),
+            number_format: context.number_format.clone(),
+        }
+    });
+    let tools = Builtin::new(
+        &state.catalog,
+        setup.permissions.clone(),
+        library,
+        database,
+        reports,
+    );
+    let host = StateHost {
+        state,
+        events: on_event,
+    };
+    let system = chat::system_prompt(
+        reports::language_name(&context.language),
+        &chrono::Local::now().format("%Y-%m-%d").to_string(),
+        &chat.attachments,
+    );
+    // A local model's context is small; an API model's is large.
+    let budget = if matches!(setup.engine, Engine::Local { .. }) {
+        40_000
+    } else {
+        200_000
+    };
+    chat::run_turn(&model, &tools, &host, &system, budget, &mut chat.messages).await
+}
+
+struct StateHost<'a> {
+    state: &'a AppState,
+    events: &'a Channel<ChatEvent>,
+}
+
+impl StateHost<'_> {
+    /// "Allow always": the rule is saved like any other set in the setup.
+    fn allow_always(&self, name: &str) {
+        let Some((connector, tool)) = name.split_once('_') else {
+            return;
+        };
+        let Ok(mut current) = self.state.setup.write() else {
+            return;
+        };
+        let Some(setup) = current.as_mut() else {
+            return;
+        };
+        setup
+            .permissions
+            .entry(connector.to_owned())
+            .or_default()
+            .insert(tool.to_owned(), Permission::Allow);
+        // The rule holds for this session even if it cannot be saved.
+        let _ = setup::save(&self.state.paths.setup, setup, &self.state.catalog);
+    }
+}
+
+impl Host for StateHost<'_> {
+    fn emit(&self, event: ChatEvent) {
+        // A closed channel only means the window went away; the turn goes on.
+        drop(self.events.send(event));
+    }
+
+    fn approve<'a>(&'a self, id: &'a str, name: &'a str) -> BoxFuture<'a, Approval> {
+        let (send, answer) = oneshot::channel();
+        if let Ok(mut pending) = self.state.approvals.lock() {
+            pending.insert(id.to_owned(), send);
+        }
+        Box::pin(async move {
+            let approval = answer.await.unwrap_or(Approval::Reject);
+            if approval == Approval::Always {
+                self.allow_always(name);
+            }
+            approval
+        })
+    }
+
+    fn record(&self, activity: Activity) {
+        let _ = self.state.activity.update(|log| {
+            log.push(activity);
+            let extra = log.len().saturating_sub(MAX_ACTIVITY);
+            log.drain(..extra);
+        });
     }
 }

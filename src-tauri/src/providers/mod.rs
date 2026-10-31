@@ -1,8 +1,9 @@
-//! Model providers: key validation, model discovery and structured answers.
-//! Chat streaming and tool calling build on the same `Provider` type in F1.
+//! Model providers: key validation, model discovery, structured answers and
+//! streaming chat with tool calls.
 
 pub mod chat;
 pub mod ollama;
+pub mod stream;
 
 use serde::{Deserialize, Serialize};
 
