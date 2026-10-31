@@ -45,4 +45,3 @@ The easiest way to help is adding a connector — see [docs/adding-a-connector.m
 ## License
 
 [Apache-2.0](LICENSE)
-# mcforge
