@@ -260,7 +260,7 @@
     "sections_other": "{{count}} sections",
     "by": "conclusions by {{engine}}",
     "auto": "automatic sections",
-    "open": "Open report",
+    "open": "View report",
     "reveal": "Show in folder",
     "failed": "The report could not be generated",
     "warning": {
@@ -281,6 +281,12 @@
       "reveal": "Folder",
       "all": "Show all ({{count}})",
       "fewer": "Show fewer"
+    },
+    "viewer": {
+      "back": "Back",
+      "print": "Print / PDF",
+      "browser": "Open in browser",
+      "folder": "Folder"
     }
   }
 }

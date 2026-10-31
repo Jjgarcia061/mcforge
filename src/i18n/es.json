@@ -260,7 +260,7 @@
     "sections_other": "{{count}} secciones",
     "by": "conclusiones de {{engine}}",
     "auto": "secciones automáticas",
-    "open": "Abrir reporte",
+    "open": "Ver reporte",
     "reveal": "Mostrar en la carpeta",
     "failed": "No se pudo generar el reporte",
     "warning": {
@@ -281,6 +281,12 @@
       "reveal": "Carpeta",
       "all": "Ver todos ({{count}})",
       "fewer": "Ver menos"
+    },
+    "viewer": {
+      "back": "Volver",
+      "print": "Imprimir / PDF",
+      "browser": "Abrir en el navegador",
+      "folder": "Carpeta"
     }
   }
 }

@@ -30,8 +30,10 @@ export const commands = {
 	deleteFocus: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("delete_focus", { id })),
 	/**  Reports generated on this computer whose files still exist, newest first. */
 	listReports: () => __TAURI_INVOKE<ReportEntry_Serialize[]>("list_reports"),
-	/**  Opens a report MCForge generated, or shows it in its folder. */
-	openReport: (path: string, reveal: boolean) => typedError<null, AppError>(__TAURI_INVOKE("open_report", { path, reveal })),
+	/**  A generated report's HTML, for the in-app viewer. */
+	readReport: (path: string) => typedError<string, AppError>(__TAURI_INVOKE("read_report", { path })),
+	/**  Opens a file MCForge generated with its default app, or shows it in its folder. */
+	openFile: (path: string, reveal: boolean) => typedError<null, AppError>(__TAURI_INVOKE("open_file", { path, reveal })),
 };
 
 /* Types */

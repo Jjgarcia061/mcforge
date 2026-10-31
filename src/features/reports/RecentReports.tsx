@@ -2,16 +2,19 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Card } from "../../components/ui";
 import type { ReportEntry } from "../../lib/api";
+import type { ViewedReport } from "./ReportViewer";
 
 const SHOWN = 8;
 
 /** Reports generated earlier on this computer, newest first. */
 export function RecentReports({
   reports,
-  onOpen,
+  onView,
+  onReveal,
 }: {
   reports: ReportEntry[];
-  onOpen: (path: string, reveal: boolean) => void;
+  onView: (report: ViewedReport) => void;
+  onReveal: (path: string) => void;
 }) {
   const { t, i18n } = useTranslation();
   const [all, setAll] = useState(false);
@@ -33,10 +36,10 @@ export function RecentReports({
                 {r.source} · {date.format(new Date(r.created))} · {t("reports.sections", { count: r.sections })}
               </div>
             </div>
-            <Button variant="secondary" className="px-3 py-1.5" onClick={() => onOpen(r.path, false)}>
+            <Button variant="secondary" className="px-3 py-1.5" onClick={() => onView(r)}>
               {t("reports.recent.open")}
             </Button>
-            <Button variant="ghost" className="px-3 py-1.5" onClick={() => onOpen(r.path, true)}>
+            <Button variant="ghost" className="px-3 py-1.5" onClick={() => onReveal(r.path)}>
               {t("reports.recent.reveal")}
             </Button>
           </li>

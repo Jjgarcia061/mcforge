@@ -42,7 +42,8 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
         commands::save_focus,
         commands::delete_focus,
         commands::list_reports,
-        commands::open_report,
+        commands::read_report,
+        commands::open_file,
     ])
 }
 

@@ -22,6 +22,7 @@ import { modelName } from "../../lib/engine";
 import { useSession } from "../../lib/session";
 import { FocusPicker } from "./FocusPicker";
 import { RecentReports } from "./RecentReports";
+import { ReportViewer, type ViewedReport } from "./ReportViewer";
 
 const STAGES: ReportStage[] = ["reading", "planning", "querying", "writing", "rendering"];
 const AI_STAGES: ReportStage[] = ["planning", "writing"];
@@ -56,6 +57,7 @@ export function ReportsView() {
   const [history, setHistory] = useState<ReportEntry[]>([]);
   const [focuses, setFocuses] = useState<SavedFocuses>({ custom: [], last: null });
   const [focusId, setFocusId] = useState("general");
+  const [viewing, setViewing] = useState<ViewedReport | null>(null);
 
   const ai = useAi && engine !== undefined;
   const busy = run !== null && "stage" in run;
@@ -154,7 +156,7 @@ export function ReportsView() {
       );
       finished = true;
       setRun({ outcome });
-      void openReport(outcome.path, false);
+      setViewing(outcome);
       void commands.listReports().then(setHistory);
     } catch (e) {
       finished = true;
@@ -167,16 +169,20 @@ export function ReportsView() {
     void commands.cancelReport();
   }
 
-  async function openReport(path: string, reveal: boolean) {
+  async function openFile(path: string, reveal: boolean) {
     try {
-      await unwrap(commands.openReport(path, reveal));
+      await unwrap(commands.openFile(path, reveal));
     } catch (e) {
       setRun({ error: errorMessage(e) });
     }
   }
 
+  if (viewing) {
+    return <ReportViewer report={viewing} onBack={() => setViewing(null)} onOpen={(p, r) => void openFile(p, r)} />;
+  }
+
   return (
-    <div className="space-y-5">
+    <div className="mx-auto max-w-3xl space-y-5">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">{t("reports.title")}</h1>
         <p className="mt-1 text-zinc-500">{t("reports.subtitle")}</p>
@@ -285,11 +291,18 @@ export function ReportsView() {
         )}
         {run && "cancelled" in run && <Notice>{t("reports.cancelled")}</Notice>}
         {run && "outcome" in run && (
-          <Result outcome={run.outcome} onOpen={(reveal) => void openReport(run.outcome.path, reveal)} />
+          <Result
+            outcome={run.outcome}
+            onOpen={(reveal) => (reveal ? void openFile(run.outcome.path, true) : setViewing(run.outcome))}
+          />
         )}
       </div>
 
-      <RecentReports reports={history} onOpen={(path, reveal) => void openReport(path, reveal)} />
+      <RecentReports
+        reports={history}
+        onView={setViewing}
+        onReveal={(path) => void openFile(path, true)}
+      />
     </div>
   );
 }

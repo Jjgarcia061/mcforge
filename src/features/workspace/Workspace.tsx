@@ -47,10 +47,9 @@ export function Workspace() {
           </div>
         )}
       </aside>
+      {/* Each view sets its own width: forms stay narrow, the report viewer uses the whole area. */}
       <main className="min-w-0 flex-1 overflow-y-auto px-10 py-8">
-        <div className="mx-auto max-w-3xl">
-          <ReportsView />
-        </div>
+        <ReportsView />
       </main>
     </div>
   );
