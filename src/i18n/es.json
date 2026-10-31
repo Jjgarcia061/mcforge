@@ -94,7 +94,7 @@
   "useCases": {
     "reports": {
       "title": "Reportes",
-      "description": "Convierte archivos CSV y bases de datos en reportes con gráficas y conclusiones."
+      "description": "Convierte archivos CSV y de Excel en reportes con gráficas y conclusiones."
     },
     "files": {
       "title": "Archivos",
@@ -184,13 +184,17 @@
   },
   "reports": {
     "title": "Reportes",
-    "subtitle": "Convierte un archivo CSV en un reporte con cifras, gráficas y conclusiones.",
+    "subtitle": "Convierte un archivo CSV o de Excel en un reporte con cifras, gráficas y conclusiones.",
     "data": "Datos",
-    "dataHint": "Elige un archivo CSV. Se copia a una base local de solo lectura; el original no se modifica.",
-    "chooseFile": "Elegir archivo CSV…",
+    "dataHint": "Elige un archivo CSV o de Excel. Se copia a una base local de solo lectura; el original no se modifica.",
+    "chooseFile": "Elegir archivo CSV o Excel…",
     "changeFile": "Cambiar archivo",
+    "fileTypes": "CSV y hojas de cálculo",
     "reading": "Leyendo el archivo…",
-    "fileInfo": "{{rows}} filas · {{columns}} columnas · separado por {{delimiter}} · {{encoding}}",
+    "fileInfo": "{{rows}} filas · {{columns}} columnas",
+    "csvInfo": "separado por {{delimiter}} · {{encoding}}",
+    "sheetInfo": "hoja «{{sheet}}»",
+    "sheet": "Hoja",
     "moreColumns": "+{{count}} más",
     "kind": {
       "integer": "entero",

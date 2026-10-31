@@ -17,7 +17,7 @@ use self::chart::Point;
 use crate::database::{Database, QueryResult};
 use crate::error::{Error, Result};
 use crate::providers::chat::Model;
-use crate::sources::{self, ColumnKind, ColumnProfile, CsvSource, display};
+use crate::sources::{self, ColumnKind, ColumnProfile, FileSource, display};
 
 const PREVIEW_ROWS: usize = 10;
 const DEFAULT_REQUEST: &str = "A general overview of the data: the main figures, the trend over time and breakdowns by category.";
@@ -177,8 +177,10 @@ impl NumberFormat {
 #[derive(Debug, Clone, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ReportRequest {
-    /// The CSV file to report on.
+    /// The CSV or spreadsheet file to report on.
     pub file: String,
+    /// For a workbook; `None` picks its first sheet with data.
+    pub sheet: Option<String>,
     pub template: String,
     pub question: Option<String>,
     pub use_ai: bool,
@@ -224,7 +226,7 @@ pub struct Ai<'a> {
 
 pub async fn generate(
     templates: &Templates,
-    source: &CsvSource,
+    source: &FileSource,
     ai: Option<Ai<'_>>,
     request: &ReportRequest,
     out_dir: &Path,
@@ -289,7 +291,7 @@ pub async fn generate(
 
     on_stage(ReportStage::Rendering);
     if title.is_empty() {
-        title = format!("{} · {}", locale.name, summary.file);
+        title = format!("{} · {}", locale.name, summary.name());
     }
     let engine = ai
         .as_ref()
@@ -391,7 +393,7 @@ struct Page<'a> {
     preview: &'a QueryResult,
     sections: &'a [Section],
     narrative: &'a Narrative,
-    source: &'a CsvSource,
+    source: &'a FileSource,
     number_format: &'a NumberFormat,
 }
 
@@ -402,7 +404,7 @@ struct Context<'a> {
     title: &'a str,
     question: Option<&'a str>,
     engine: Option<&'a str>,
-    file: &'a str,
+    file: String,
     generated_at: String,
     summary: &'a [String],
     highlights: &'a [String],
@@ -539,7 +541,7 @@ fn render(template: &Template, locale: &Locale, page: &Page) -> Result<String> {
         title: page.title,
         question: page.question,
         engine: page.engine,
-        file: &summary.file,
+        file: summary.name(),
         generated_at: chrono::Local::now().format("%Y-%m-%d %H:%M").to_string(),
         summary: &page.narrative.summary,
         highlights: &page.narrative.highlights,
@@ -646,6 +648,7 @@ mod tests {
     fn request(use_ai: bool, question: Option<&str>) -> ReportRequest {
         ReportRequest {
             file: String::new(),
+            sheet: None,
             template: "data-overview".into(),
             question: question.map(str::to_owned),
             use_ai,
@@ -657,7 +660,7 @@ mod tests {
         }
     }
 
-    async fn sales(dir: &Path) -> CsvSource {
+    async fn sales(dir: &Path) -> FileSource {
         std::fs::create_dir_all(dir).unwrap();
         let file = dir.join("ventas.csv");
         std::fs::write(
@@ -668,7 +671,7 @@ mod tests {
              2026-03-01,Sur,Laptop,1300\n2026-03-09,Norte,<b>Teclado</b>,45.5\n",
         )
         .unwrap();
-        CsvSource::import(&file, dir).await.unwrap()
+        FileSource::import(&file, None, dir).await.unwrap()
     }
 
     #[test]
@@ -729,6 +732,33 @@ mod tests {
         assert!(html.contains("4,021"), "total of the amount column");
         assert!(html.contains("&lt;b&gt;Teclado"), "data is escaped");
         assert!(!html.contains("<b>Teclado"));
+        std::fs::remove_dir_all(dir).ok();
+    }
+
+    #[tokio::test]
+    async fn a_workbook_sheet_reports_like_a_csv() {
+        let dir = std::env::temp_dir().join(format!("mcforge-report-xlsx-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("Ventas 2026.xlsx");
+        crate::sources::tests::sales_workbook(&file);
+        let source = FileSource::import(&file, None, &dir).await.unwrap();
+        let outcome = generate(
+            &templates(),
+            &source,
+            None,
+            &request(false, None),
+            &dir,
+            |_| {},
+        )
+        .await
+        .unwrap();
+        let html = std::fs::read_to_string(&outcome.path).unwrap();
+        assert!(
+            html.contains("Ventas 2026.xlsx · Ventas"),
+            "source names the sheet"
+        );
+        assert!(html.contains("Total por mes"));
+        assert!(html.contains("1,829.75"), "total of the amount column");
         std::fs::remove_dir_all(dir).ok();
     }
 
@@ -849,7 +879,9 @@ mod tests {
             panic!("set MCFORGE_TEST_OLLAMA_MODEL and MCFORGE_TEST_CSV");
         };
         let dir = std::env::temp_dir().join("mcforge-real-model");
-        let source = CsvSource::import(Path::new(&csv), &dir).await.unwrap();
+        let source = FileSource::import(Path::new(&csv), None, &dir)
+            .await
+            .unwrap();
         let engine = EngineModel::new(
             reqwest::Client::new(),
             crate::setup::Engine::Local {

@@ -530,8 +530,10 @@ mod tests {
                     kind: c.kind,
                 })
                 .collect(),
-            delimiter: ",".into(),
-            encoding: "UTF-8".into(),
+            format: crate::sources::SourceFormat::Csv {
+                delimiter: ",".into(),
+                encoding: "UTF-8".into(),
+            },
         }
     }
 

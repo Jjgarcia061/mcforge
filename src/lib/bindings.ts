@@ -18,8 +18,8 @@ export const commands = {
 	loadSetup: () => __TAURI_INVOKE<Setup_Serialize | null>("load_setup"),
 	saveSetup: (setup: Setup_Deserialize) => typedError<null, AppError>(__TAURI_INVOKE("save_setup", { setup })),
 	listTemplates: (language: string) => __TAURI_INVOKE<TemplateInfo[]>("list_templates", { language }),
-	/**  Imports a CSV file (or reuses its cached import) and describes its columns. */
-	inspectCsv: (path: string) => typedError<SourceSummary, AppError>(__TAURI_INVOKE("inspect_csv", { path })),
+	/**  Imports a CSV file or a workbook sheet (or reuses its cached import) and describes its columns. */
+	inspectSource: (path: string, sheet: string | null) => typedError<SourceSummary, AppError>(__TAURI_INVOKE("inspect_source", { path, sheet })),
 	generateReport: (request: ReportRequest_Deserialize, onStage: Channel<ReportStage>) => typedError<ReportOutcome_Serialize, AppError>(__TAURI_INVOKE("generate_report", { request, onStage })),
 	/**  Opens a report generated in this session, or shows it in its folder. */
 	openReport: (path: string, reveal: boolean) => typedError<null, AppError>(__TAURI_INVOKE("open_report", { path, reveal })),
@@ -257,8 +257,10 @@ export type ReportOutcome_Serialize = {
 export type ReportRequest = ReportRequest_Serialize | ReportRequest_Deserialize;
 
 export type ReportRequest_Deserialize = {
-	/**  The CSV file to report on. */
+	/**  The CSV or spreadsheet file to report on. */
 	file: string,
+	/**  For a workbook; `None` picks its first sheet with data. */
+	sheet?: string | null,
 	template: string,
 	question?: string | null,
 	useAi: boolean,
@@ -267,8 +269,10 @@ export type ReportRequest_Deserialize = {
 };
 
 export type ReportRequest_Serialize = {
-	/**  The CSV file to report on. */
+	/**  The CSV or spreadsheet file to report on. */
 	file: string,
+	/**  For a workbook; `None` picks its first sheet with data. */
+	sheet: string | null,
 	template: string,
 	question: string | null,
 	useAi: boolean,
@@ -326,13 +330,18 @@ export type SourceColumn = {
 	kind: ColumnKind,
 };
 
+export type SourceFormat = 
+/**  `delimiter` is the character itself, or `tab`. */
+{ kind: "csv"; delimiter: string; encoding: string } | 
+/**  The imported sheet and every visible worksheet, in workbook order. */
+{ kind: "spreadsheet"; sheet: string; sheets: string[] };
+
 export type SourceSummary = {
 	file: string,
 	table: string,
 	rows: number,
 	columns: SourceColumn[],
-	delimiter: string,
-	encoding: string,
+	format: SourceFormat,
 };
 
 export type SystemReport = SystemReport_Serialize | SystemReport_Deserialize;

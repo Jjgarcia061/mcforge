@@ -33,8 +33,10 @@ csv = { version = "1.4.0", default-features = false }
 encoding_rs = { version = "0.8.44", default-features = false }
 minijinja = { version = "3.0.5", default-features = false, features = ["builtins", "macros", "serde", "std_collections"] }
 chrono = { version = "0.4.45", default-features = false, features = ["clock", "std"] }
+calamine = { version = "0.37", features = ["dates"] }
 
 [dev-dependencies]
+rust_xlsxwriter = { version = "0.102", default-features = false }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 [profile.release]

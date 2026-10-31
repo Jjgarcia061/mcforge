@@ -94,7 +94,7 @@
   "useCases": {
     "reports": {
       "title": "Reports",
-      "description": "Turn CSV files and databases into reports with charts and conclusions."
+      "description": "Turn CSV and Excel files into reports with charts and conclusions."
     },
     "files": {
       "title": "Files",
@@ -184,13 +184,17 @@
   },
   "reports": {
     "title": "Reports",
-    "subtitle": "Turn a CSV file into a report with figures, charts and conclusions.",
+    "subtitle": "Turn a CSV or Excel file into a report with figures, charts and conclusions.",
     "data": "Data",
-    "dataHint": "Choose a CSV file. It is copied into a local read-only database; the original is never changed.",
-    "chooseFile": "Choose CSV file…",
+    "dataHint": "Choose a CSV or Excel file. It is copied into a local read-only database; the original is never changed.",
+    "chooseFile": "Choose CSV or Excel file…",
     "changeFile": "Change file",
+    "fileTypes": "CSV and spreadsheets",
     "reading": "Reading the file…",
-    "fileInfo": "{{rows}} rows · {{columns}} columns · {{delimiter}} separated · {{encoding}}",
+    "fileInfo": "{{rows}} rows · {{columns}} columns",
+    "csvInfo": "{{delimiter}} separated · {{encoding}}",
+    "sheetInfo": "sheet “{{sheet}}”",
+    "sheet": "Sheet",
     "moreColumns": "+{{count}} more",
     "kind": {
       "integer": "integer",

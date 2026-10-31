@@ -9,7 +9,7 @@ React UI (src/)  ──  typed IPC (src/lib/bindings.ts, generated)  ──  Rus
                                                                        ├─ recommend  hardware × models → ranking
                                                                        ├─ providers  Anthropic, OpenAI, Ollama (keys, models, JSON answers)
                                                                        ├─ database   built-in PostgreSQL / MySQL / SQLite connector
-                                                                       ├─ sources    CSV files → cached read-only SQLite tables
+                                                                       ├─ sources    CSV and spreadsheet files → cached read-only SQLite tables
                                                                        ├─ reports    plan → query → explain → render (MiniJinja + SVG charts)
                                                                        ├─ setup      saved setup (JSON) with secrets in the keychain
                                                                        ├─ policy     allow / ask / deny gate
@@ -37,7 +37,7 @@ React UI (src/)  ──  typed IPC (src/lib/bindings.ts, generated)  ──  Rus
 
 ## Reports
 
-`inspect_csv` imports a file (or reuses its cached import) and describes its columns. `generate_report` streams its stages over a Tauri channel while it plans, queries, explains and renders; see [report-templates.md](report-templates.md). The AI's SQL runs through the same read-only `Database` as the database connector, so a model that writes `DELETE` gets an error, not a deletion. `open_report` only opens files generated in the current session.
+`inspect_source` imports a CSV file or a workbook sheet (or reuses its cached import) and describes its columns. `generate_report` streams its stages over a Tauri channel while it plans, queries, explains and renders; see [report-templates.md](report-templates.md). The AI's SQL runs through the same read-only `Database` as the database connector, so a model that writes `DELETE` gets an error, not a deletion. `open_report` only opens files generated in the current session.
 
 ## Database connector
 
@@ -52,7 +52,7 @@ For extra safety, connect with a database user that only has the privileges you 
 
 | Phase | Scope |
 |---|---|
-| F0 | Structure, catalog, hardware & recommendation, setup wizard, saved setup, CSV reports (HTML) |
+| F0 | Structure, catalog, hardware & recommendation, setup wizard, saved setup, CSV and spreadsheet reports (HTML) |
 | F1 | Chat with streaming and tool calling (Anthropic, OpenAI, Ollama) |
 | F2 | MCP host: launch servers, enforce policy, audit log, activity view; persist setup |
 | F3 | More report formats (PDF via Typst, XLSX, DOCX), database sources, more templates |

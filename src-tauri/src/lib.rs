@@ -33,7 +33,7 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
         commands::load_setup,
         commands::save_setup,
         commands::list_templates,
-        commands::inspect_csv,
+        commands::inspect_source,
         commands::generate_report,
         commands::open_report,
     ])

@@ -1,16 +1,19 @@
-//! Report data sources. A CSV file is imported once into a cached SQLite file
-//! and from then on read through the same read-only `Database` as any other
-//! database, so queries written by the AI get the same guarantees.
+//! Report data sources. A CSV file or a spreadsheet sheet is imported once into
+//! a cached SQLite file and from then on read through the same read-only
+//! `Database` as any other database, so queries written by the AI get the same
+//! guarantees.
 //!
 //! The import copes with what real exports look like: `,` `;` tab or `|`
 //! delimiters, UTF-8/UTF-16 with or without BOM or Windows-1252, decimal
-//! commas, thousands separators, currency signs and day-first dates.
+//! commas, thousands separators, currency signs, day-first dates and title
+//! lines above the header. Spreadsheet cells go through the same type rules.
 
 use std::borrow::Cow;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::path::{Path, PathBuf};
 
-use chrono::NaiveDate;
+use calamine::Reader;
+use chrono::{NaiveDate, NaiveTime};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqliteSynchronous};
@@ -21,8 +24,10 @@ use crate::error::{Error, Result};
 
 const MAX_FILE_BYTES: u64 = 100 * 1024 * 1024;
 /// Bump whenever the import rules change so cached imports are rebuilt.
-const IMPORT_VERSION: u32 = 1;
+const IMPORT_VERSION: u32 = 2;
 const DELIMITERS: [u8; 4] = *b",;\t|";
+/// Extensions read as workbooks; anything else is read as delimited text.
+pub const SPREADSHEETS: [&str; 5] = ["xlsx", "xlsm", "xlsb", "xls", "ods"];
 const NULLS: [&str; 5] = ["null", "na", "n/a", "nan", "#n/a"];
 /// Identifiers a model would be tempted to write unquoted; they get a trailing `_`.
 const RESERVED: [&str; 14] = [
@@ -71,19 +76,40 @@ pub struct SourceSummary {
     pub table: String,
     pub rows: u32,
     pub columns: Vec<SourceColumn>,
-    pub delimiter: String,
-    pub encoding: String,
+    pub format: SourceFormat,
 }
 
-/// An imported CSV file, ready to be queried.
-pub struct CsvSource {
+impl SourceSummary {
+    /// The file name, plus the sheet when the workbook has several.
+    pub fn name(&self) -> String {
+        match &self.format {
+            SourceFormat::Spreadsheet { sheet, sheets } if sheets.len() > 1 => {
+                format!("{} · {sheet}", self.file)
+            }
+            _ => self.file.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, specta::Type)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum SourceFormat {
+    /// `delimiter` is the character itself, or `tab`.
+    Csv { delimiter: String, encoding: String },
+    /// The imported sheet and every visible worksheet, in workbook order.
+    Spreadsheet { sheet: String, sheets: Vec<String> },
+}
+
+/// An imported file, ready to be queried.
+pub struct FileSource {
     pub summary: SourceSummary,
     db_path: PathBuf,
 }
 
-impl CsvSource {
-    /// Imports `file`, reusing a previous import while the file is unchanged.
-    pub async fn import(file: &Path, cache_dir: &Path) -> Result<Self> {
+impl FileSource {
+    /// Imports `file` (for a workbook, `sheet` or else its first sheet with data),
+    /// reusing a previous import while the file is unchanged.
+    pub async fn import(file: &Path, sheet: Option<&str>, cache_dir: &Path) -> Result<Self> {
         let meta =
             std::fs::metadata(file).map_err(|e| Error::Io(format!("{}: {e}", file.display())))?;
         if meta.len() > MAX_FILE_BYTES {
@@ -94,7 +120,14 @@ impl CsvSource {
             )));
         }
         let mut hasher = DefaultHasher::new();
-        (IMPORT_VERSION, file, meta.len(), meta.modified().ok()).hash(&mut hasher);
+        (
+            IMPORT_VERSION,
+            file,
+            meta.len(),
+            meta.modified().ok(),
+            sheet,
+        )
+            .hash(&mut hasher);
         let dir = cache_dir.join("sources");
         let db_path = dir.join(format!("{:016x}.db", hasher.finish()));
         let summary_path = db_path.with_extension("json");
@@ -116,9 +149,16 @@ impl CsvSource {
             .unwrap_or_default();
         let table = identifier(&stem, "data");
         let path = file.to_owned();
-        let parsed = tokio::task::spawn_blocking(move || parse(&std::fs::read(path)?))
-            .await
-            .map_err(|e| Error::Io(e.to_string()))??;
+        let sheet = sheet.map(str::to_owned);
+        let parsed = tokio::task::spawn_blocking(move || {
+            if is_spreadsheet(&path) {
+                parse_workbook(&path, sheet.as_deref())
+            } else {
+                parse_csv(&std::fs::read(&path)?)
+            }
+        })
+        .await
+        .map_err(|e| Error::Io(e.to_string()))??;
 
         std::fs::create_dir_all(&dir)?;
         let partial = db_path.with_extension("partial");
@@ -131,11 +171,7 @@ impl CsvSource {
             table,
             rows: u32::try_from(parsed.rows.len()).unwrap_or(u32::MAX),
             columns: parsed.columns,
-            delimiter: match parsed.delimiter {
-                b'\t' => "tab".into(),
-                d => char::from(d).to_string(),
-            },
-            encoding: parsed.encoding.into(),
+            format: parsed.format,
         };
         std::fs::write(
             &summary_path,
@@ -158,16 +194,21 @@ enum Cell {
 }
 
 struct Parsed {
-    delimiter: u8,
-    encoding: &'static str,
+    format: SourceFormat,
     columns: Vec<SourceColumn>,
     rows: Vec<Vec<Cell>>,
 }
 
-fn parse(bytes: &[u8]) -> Result<Parsed> {
+fn is_spreadsheet(file: &Path) -> bool {
+    file.extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| SPREADSHEETS.iter().any(|s| e.eq_ignore_ascii_case(s)))
+}
+
+fn parse_csv(bytes: &[u8]) -> Result<Parsed> {
     let (text, encoding) = decode(bytes);
     let delimiter = sniff_delimiter(&text);
-    let mut records: Vec<Vec<String>> = csv::ReaderBuilder::new()
+    let records: Vec<Vec<String>> = csv::ReaderBuilder::new()
         .delimiter(delimiter)
         .has_headers(false)
         .flexible(true)
@@ -177,9 +218,113 @@ fn parse(bytes: &[u8]) -> Result<Parsed> {
         .map(|r| r.map(|r| r.iter().map(str::to_owned).collect()))
         .collect::<std::result::Result<_, _>>()
         .map_err(|e| Error::Io(format!("could not read the CSV file: {e}")))?;
-    records.retain(|r: &Vec<String>| r.iter().any(|v| !v.is_empty()));
+    // Semicolon files come from locales that write decimal commas; prefer that reading when both fit.
+    let decimal = if delimiter == b';' {
+        Decimal::Comma
+    } else {
+        Decimal::Point
+    };
+    let (columns, rows) = tabulate(records, decimal)?;
+    Ok(Parsed {
+        format: SourceFormat::Csv {
+            delimiter: match delimiter {
+                b'\t' => "tab".into(),
+                d => char::from(d).to_string(),
+            },
+            encoding: encoding.into(),
+        },
+        columns,
+        rows,
+    })
+}
+
+/// One sheet of a workbook: `sheet`, or else the first visible worksheet with
+/// rows under its header, so cover and notes sheets are skipped.
+fn parse_workbook(file: &Path, sheet: Option<&str>) -> Result<Parsed> {
+    let failed = |e: calamine::Error| Error::Io(format!("could not read the spreadsheet: {e}"));
+    let mut book = calamine::open_workbook_auto(file).map_err(failed)?;
+    let sheets: Vec<String> = book
+        .sheets_metadata()
+        .iter()
+        .filter(|s| {
+            s.typ == calamine::SheetType::WorkSheet && s.visible == calamine::SheetVisible::Visible
+        })
+        .map(|s| s.name.clone())
+        .collect();
+    let mut read = |name: &str| {
+        let range = book.worksheet_range(name).map_err(failed)?;
+        let records = range
+            .rows()
+            .map(|r| r.iter().map(cell_text).collect())
+            .collect();
+        // Numbers are stored as numbers, so their text always uses a decimal point.
+        tabulate(records, Decimal::Point)
+    };
+    let (sheet, (columns, rows)) = match sheet {
+        Some(name) => (name.to_owned(), read(name)?),
+        None => sheets
+            .iter()
+            .find_map(|name| {
+                read(name)
+                    .ok()
+                    .filter(|(_, rows)| !rows.is_empty())
+                    .map(|table| (name.clone(), table))
+            })
+            .ok_or_else(|| Error::Io("no sheet in this workbook has data".into()))?,
+    };
+    Ok(Parsed {
+        format: SourceFormat::Spreadsheet { sheet, sheets },
+        columns,
+        rows,
+    })
+}
+
+/// A spreadsheet cell written the way a CSV export would write it.
+fn cell_text(cell: &calamine::Data) -> String {
+    use calamine::Data;
+    match cell {
+        Data::Int(v) => v.to_string(),
+        Data::Float(v) => v.to_string(),
+        Data::Bool(v) => v.to_string(),
+        Data::String(v) | Data::DateTimeIso(v) | Data::DurationIso(v) => v.trim().to_owned(),
+        Data::DateTime(d) if d.is_duration() => d
+            .as_duration()
+            .map(|d| {
+                let s = d.num_seconds();
+                format!("{}:{:02}:{:02}", s / 3600, s / 60 % 60, s % 60)
+            })
+            .unwrap_or_default(),
+        Data::DateTime(d) => d
+            .as_datetime()
+            .map(|d| {
+                let format = if d.time() == NaiveTime::MIN {
+                    "%Y-%m-%d"
+                } else {
+                    "%Y-%m-%d %H:%M:%S"
+                };
+                d.format(format).to_string()
+            })
+            .unwrap_or_default(),
+        Data::Error(_) | Data::Empty => String::new(),
+    }
+}
+
+/// Header, column names and typed rows from raw text records.
+fn tabulate(
+    mut records: Vec<Vec<String>>,
+    decimal: Decimal,
+) -> Result<(Vec<SourceColumn>, Vec<Vec<Cell>>)> {
+    records.retain(|r| r.iter().any(|v| !v.is_empty()));
+    // Titles and notes above the header fill a cell or two; the header fills most of its row.
+    let filled = |r: &Vec<String>| r.iter().filter(|v| !v.is_empty()).count();
+    let widest = records.iter().map(filled).max().unwrap_or(0);
+    let start = records
+        .iter()
+        .position(|r| filled(r) * 2 > widest)
+        .unwrap_or(0);
+    records.drain(..start);
     if records.is_empty() {
-        return Err(Error::Io("the CSV file is empty".into()));
+        return Err(Error::Io("there is no data in this file".into()));
     }
     let header = records.remove(0);
     let width = records.iter().map(Vec::len).fold(header.len(), usize::max);
@@ -202,7 +347,7 @@ fn parse(bytes: &[u8]) -> Result<Parsed> {
             .filter_map(|r| r.get(i).map(String::as_str))
             .filter(|v| !is_null(v))
             .collect();
-        let converter = infer(&values, delimiter);
+        let converter = infer(&values, decimal);
         names.push(name.clone());
         columns.push(SourceColumn {
             label: if label.is_empty() {
@@ -229,12 +374,7 @@ fn parse(bytes: &[u8]) -> Result<Parsed> {
                 .collect()
         })
         .collect();
-    Ok(Parsed {
-        delimiter,
-        encoding,
-        columns,
-        rows,
-    })
+    Ok((columns, rows))
 }
 
 /// UTF-8 or UTF-16 when a BOM says so or the bytes are valid UTF-8; otherwise
@@ -375,16 +515,14 @@ impl Converter {
     }
 }
 
-/// The most specific type every value in the column fits.
-fn infer(values: &[&str], delimiter: u8) -> Converter {
+/// The most specific type every value in the column fits, trying `decimal` first.
+fn infer(values: &[&str], decimal: Decimal) -> Converter {
     if values.is_empty() {
         return Converter::Text;
     }
-    // Semicolon files come from locales that write decimal commas; prefer that reading when both fit.
-    let styles = if delimiter == b';' {
-        [Decimal::Comma, Decimal::Point]
-    } else {
-        [Decimal::Point, Decimal::Comma]
+    let styles = match decimal {
+        Decimal::Comma => [Decimal::Comma, Decimal::Point],
+        Decimal::Point => [Decimal::Point, Decimal::Comma],
     };
     for style in styles {
         let numbers: Option<Vec<Number>> = values.iter().map(|v| parse_number(v, style)).collect();
@@ -654,17 +792,124 @@ pub fn display(v: &Value) -> String {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
 
     fn kinds(p: &Parsed) -> Vec<ColumnKind> {
         p.columns.iter().map(|c| c.kind).collect()
     }
 
+    fn csv(delimiter: &str, encoding: &str) -> SourceFormat {
+        SourceFormat::Csv {
+            delimiter: delimiter.into(),
+            encoding: encoding.into(),
+        }
+    }
+
+    /// A workbook shaped like a real export: a notes sheet first, a title above
+    /// the header, real dates, and codes stored as text.
+    pub(crate) fn sales_workbook(path: &Path) {
+        use rust_xlsxwriter::{ExcelDateTime, Format, Workbook};
+        let mut book = Workbook::new();
+        let date = Format::new().set_num_format("dd/mm/yyyy");
+        book.add_worksheet()
+            .set_name("Notas")
+            .unwrap()
+            .write_string(0, 0, "Exportado del sistema de ventas")
+            .unwrap();
+        let sales = book.add_worksheet().set_name("Ventas").unwrap();
+        sales.write_string(0, 0, "Reporte de ventas 2026").unwrap();
+        for (col, header) in ["Fecha", "Región", "Código", "Unidades", "Total"]
+            .into_iter()
+            .enumerate()
+        {
+            sales.write_string(2, col as u16, header).unwrap();
+        }
+        let rows = [
+            ((2026, 1, 5), "Norte", "007", 3.0, 1299.5),
+            ((2026, 1, 6), "Sur", "010", 1.0, 80.0),
+            ((2026, 2, 7), "Norte", "007", 2.0, 450.25),
+        ];
+        for (i, ((y, m, d), region, code, units, total)) in rows.into_iter().enumerate() {
+            let row = 3 + i as u32;
+            let day = ExcelDateTime::from_ymd(y, m, d).unwrap();
+            sales
+                .write_datetime_with_format(row, 0, day, &date)
+                .unwrap();
+            sales.write_string(row, 1, region).unwrap();
+            sales.write_string(row, 2, code).unwrap();
+            sales.write_number(row, 3, units).unwrap();
+            sales.write_number(row, 4, total).unwrap();
+        }
+        let goals = book.add_worksheet().set_name("Metas").unwrap();
+        goals.write_string(0, 0, "Región").unwrap();
+        goals.write_string(0, 1, "Meta").unwrap();
+        for (row, (region, goal)) in [(1, ("Norte", 1000.0)), (2, ("Sur", 800.0))] {
+            goals.write_string(row, 0, region).unwrap();
+            goals.write_number(row, 1, goal).unwrap();
+        }
+        book.save(path).unwrap();
+    }
+
+    #[test]
+    fn skips_title_lines_above_the_header() {
+        let p = parse_csv(
+            b"Reporte de ventas\nGenerado el 01/02/2026\n\nregion,total\nNorte,10\nSur,5\n",
+        )
+        .unwrap();
+        let names: Vec<_> = p.columns.iter().map(|c| c.name.as_str()).collect();
+        assert_eq!(names, ["region", "total"]);
+        assert_eq!(p.rows.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn imports_the_first_sheet_with_data_or_the_chosen_one() {
+        let dir = std::env::temp_dir().join(format!("mcforge-xlsx-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("Ventas 2026.xlsx");
+        sales_workbook(&file);
+
+        let source = FileSource::import(&file, None, &dir).await.unwrap();
+        let s = &source.summary;
+        assert_eq!(
+            s.format,
+            SourceFormat::Spreadsheet {
+                sheet: "Ventas".into(),
+                sheets: vec!["Notas".into(), "Ventas".into(), "Metas".into()],
+            }
+        );
+        assert_eq!(s.name(), "Ventas 2026.xlsx · Ventas");
+        let labels: Vec<_> = s.columns.iter().map(|c| c.label.as_str()).collect();
+        assert_eq!(labels, ["Fecha", "Región", "Código", "Unidades", "Total"]);
+        use ColumnKind::*;
+        let kinds: Vec<_> = s.columns.iter().map(|c| c.kind).collect();
+        assert_eq!(kinds, [Date, Text, Text, Integer, Decimal]);
+        let db = source.open().await.unwrap();
+        let r = db
+            .query("SELECT fecha, codigo, total FROM ventas_2026 ORDER BY fecha")
+            .await
+            .unwrap();
+        assert_eq!(
+            r.rows[0],
+            [
+                Value::from("2026-01-05"),
+                Value::from("007"),
+                Value::from(1299.5)
+            ]
+        );
+
+        let goals = FileSource::import(&file, Some("Metas"), &dir)
+            .await
+            .unwrap();
+        assert_eq!(goals.summary.rows, 2);
+        assert_eq!(goals.summary.columns[1].kind, Integer);
+        std::fs::remove_dir_all(dir).ok();
+    }
+
     #[test]
     fn reads_a_plain_comma_file() {
-        let p = parse(b"Order ID,Date,Region,Units,Revenue\n1,2026-01-05,North,3,1299.50\n2,2026-01-06,South,1,80\n").unwrap();
-        assert_eq!(p.delimiter, b',');
+        let p = parse_csv(b"Order ID,Date,Region,Units,Revenue\n1,2026-01-05,North,3,1299.50\n2,2026-01-06,South,1,80\n").unwrap();
+        assert_eq!(p.format, csv(",", "UTF-8"));
         let names: Vec<_> = p.columns.iter().map(|c| c.name.as_str()).collect();
         assert_eq!(names, ["order_id", "date", "region", "units", "revenue"]);
         use ColumnKind::*;
@@ -680,8 +925,8 @@ mod tests {
         bytes.extend_from_slice(b"Fecha;Regi\xf3n;Importe;C\xf3digo\n");
         bytes.extend_from_slice(b"31/01/2026;Norte;1.234,56;007\n");
         bytes.extend_from_slice(b"02/02/2026;Sur;12,5;010\n");
-        let p = parse(&bytes).unwrap();
-        assert_eq!((p.delimiter, p.encoding), (b';', "windows-1252"));
+        let p = parse_csv(&bytes).unwrap();
+        assert_eq!(p.format, csv(";", "windows-1252"));
         let names: Vec<_> = p.columns.iter().map(|c| c.name.as_str()).collect();
         assert_eq!(names, ["fecha", "region", "importe", "codigo"]);
         assert_eq!(p.columns[1].label, "Región");
@@ -695,12 +940,12 @@ mod tests {
 
     #[test]
     fn handles_bom_tabs_blanks_and_odd_headers() {
-        let p = parse(
+        let p = parse_csv(
             "\u{feff}Name\t\tName\torder\n\"Ana\"\t$1,200\tx\t\n\t\t\t\nLuis\t-$30\ty\tNA\n"
                 .as_bytes(),
         )
         .unwrap();
-        assert_eq!((p.delimiter, p.encoding), (b'\t', "UTF-8"));
+        assert_eq!(p.format, csv("tab", "UTF-8"));
         let names: Vec<_> = p.columns.iter().map(|c| c.name.as_str()).collect();
         assert_eq!(names, ["name", "column_2", "name_2", "order_"]);
         assert_eq!(p.rows.len(), 2, "blank lines are skipped");
@@ -711,7 +956,7 @@ mod tests {
 
     #[test]
     fn month_first_dates_are_detected_from_the_data() {
-        let p = parse(b"when,v\n01/31/2026 08:30,1\n02/01/2026,2\n").unwrap();
+        let p = parse_csv(b"when,v\n01/31/2026 08:30,1\n02/01/2026,2\n").unwrap();
         assert_eq!(p.columns[0].kind, ColumnKind::Date);
         assert_eq!(p.rows[0][0], Cell::Text("2026-01-31 08:30:00".into()));
         assert_eq!(p.rows[1][0], Cell::Text("2026-02-01 00:00:00".into()));
@@ -719,7 +964,7 @@ mod tests {
 
     #[test]
     fn mixed_values_stay_text() {
-        let p = parse(b"a,b\n1,2026-01-01\nx,soon\n").unwrap();
+        let p = parse_csv(b"a,b\n1,2026-01-01\nx,soon\n").unwrap();
         assert_eq!(kinds(&p), [ColumnKind::Text, ColumnKind::Text]);
     }
 
@@ -742,7 +987,7 @@ mod tests {
         )
         .unwrap();
 
-        let source = CsvSource::import(&file, &dir).await.unwrap();
+        let source = FileSource::import(&file, None, &dir).await.unwrap();
         assert_eq!(source.summary.table, "ventas_2026");
         assert_eq!(source.summary.rows, 3);
         let db = source.open().await.unwrap();
@@ -756,7 +1001,7 @@ mod tests {
         assert_eq!(profile[1].top, [("Norte".into(), 2), ("Sur".into(), 1)]);
         assert_eq!(profile[2].sum, Some(35.5));
 
-        let again = CsvSource::import(&file, &dir).await.unwrap();
+        let again = FileSource::import(&file, None, &dir).await.unwrap();
         assert_eq!(
             again.db_path, source.db_path,
             "unchanged files reuse the import"

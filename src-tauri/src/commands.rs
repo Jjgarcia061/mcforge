@@ -22,7 +22,7 @@ use crate::reports::{
 };
 use crate::secrets;
 use crate::setup::{self, Engine, Setup};
-use crate::sources::{CsvSource, SourceSummary};
+use crate::sources::{FileSource, SourceSummary};
 
 pub struct AppState {
     pub catalog: Catalog,
@@ -150,13 +150,19 @@ pub fn list_templates(state: State<'_, AppState>, language: String) -> Vec<Templ
     state.templates.list(&language)
 }
 
-/// Imports a CSV file (or reuses its cached import) and describes its columns.
+/// Imports a CSV file or a workbook sheet (or reuses its cached import) and describes its columns.
 #[tauri::command]
 #[specta::specta]
-pub async fn inspect_csv(state: State<'_, AppState>, path: String) -> Result<SourceSummary> {
-    Ok(CsvSource::import(Path::new(&path), &state.paths.cache)
-        .await?
-        .summary)
+pub async fn inspect_source(
+    state: State<'_, AppState>,
+    path: String,
+    sheet: Option<String>,
+) -> Result<SourceSummary> {
+    Ok(
+        FileSource::import(Path::new(&path), sheet.as_deref(), &state.paths.cache)
+            .await?
+            .summary,
+    )
 }
 
 #[tauri::command]
@@ -168,7 +174,12 @@ pub async fn generate_report(
 ) -> Result<ReportOutcome> {
     let stage = |s| drop(on_stage.send(s));
     stage(ReportStage::Reading);
-    let source = CsvSource::import(Path::new(&request.file), &state.paths.cache).await?;
+    let source = FileSource::import(
+        Path::new(&request.file),
+        request.sheet.as_deref(),
+        &state.paths.cache,
+    )
+    .await?;
 
     let saved = state.setup.read().ok().and_then(|s| s.clone());
     let out_dir = saved

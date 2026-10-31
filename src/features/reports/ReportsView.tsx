@@ -1,7 +1,7 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Badge, Button, Card, Label, Notice, Spinner, Textarea } from "../../components/ui";
+import { Badge, Button, Card, Label, Notice, Select, Spinner, Textarea } from "../../components/ui";
 import {
   Channel,
   commands,
@@ -22,6 +22,7 @@ const STAGES: ReportStage[] = ["reading", "planning", "querying", "writing", "re
 const AI_STAGES: ReportStage[] = ["planning", "writing"];
 const SHOWN_COLUMNS = 14;
 const DELIMITERS: Record<string, string> = { ",": "comma", ";": "semicolon", tab: "tab", "|": "pipe" };
+const EXTENSIONS = ["csv", "tsv", "txt", "xlsx", "xlsm", "xlsb", "xls", "ods"];
 
 /** The separators this system writes numbers with, so the report reads naturally. */
 function numberFormat(locale?: string): NumberFormat {
@@ -74,16 +75,21 @@ export function ReportsView() {
     const path = await open({
       multiple: false,
       directory: false,
-      filters: [{ name: "CSV", extensions: ["csv", "tsv", "txt"] }],
+      filters: [{ name: t("reports.fileTypes"), extensions: EXTENSIONS }],
     });
-    if (!path) return;
+    if (path) await inspect(path, null);
+  }
+
+  /** Reads `path`; for a workbook, `sheet` or else its first sheet with data. */
+  async function inspect(path: string, sheet: string | null) {
     setReading(true);
     setSourceError(null);
     setRun(null);
     try {
-      setSource({ path, summary: await unwrap(commands.inspectCsv(path)) });
+      setSource({ path, summary: await unwrap(commands.inspectSource(path, sheet)) });
     } catch (e) {
-      setSource(null);
+      // A sheet that fails to read leaves the file and its other sheets selectable.
+      if (sheet === null) setSource(null);
       setSourceError(errorMessage(e));
     } finally {
       setReading(false);
@@ -102,6 +108,7 @@ export function ReportsView() {
         commands.generateReport(
           {
             file: source.path,
+            sheet: source.summary.format.kind === "spreadsheet" ? source.summary.format.sheet : null,
             template,
             question: question.trim() || null,
             useAi: ai,
@@ -138,7 +145,11 @@ export function ReportsView() {
       <Card>
         <h2 className="mb-3 font-medium">{t("reports.data")}</h2>
         {source ? (
-          <SourcePreview summary={source.summary} />
+          <SourcePreview
+            summary={source.summary}
+            disabled={reading || busy}
+            onSheet={(sheet) => void inspect(source.path, sheet)}
+          />
         ) : (
           <p className="mb-3 text-sm text-zinc-500">{t("reports.dataHint")}</p>
         )}
@@ -225,20 +236,43 @@ export function ReportsView() {
   );
 }
 
-function SourcePreview({ summary }: { summary: SourceSummary }) {
+function SourcePreview({
+  summary,
+  disabled,
+  onSheet,
+}: {
+  summary: SourceSummary;
+  disabled: boolean;
+  onSheet: (sheet: string) => void;
+}) {
   const { t } = useTranslation();
   const hidden = summary.columns.length - SHOWN_COLUMNS;
+  const format = summary.format;
+  const size = t("reports.fileInfo", { rows: summary.rows.toLocaleString(), columns: summary.columns.length });
   return (
     <div className="mb-4">
       <div className="font-mono text-sm">{summary.file}</div>
       <div className="mt-0.5 text-xs text-zinc-500">
-        {t("reports.fileInfo", {
-          rows: summary.rows.toLocaleString(),
-          columns: summary.columns.length,
-          delimiter: t(`reports.delimiter.${DELIMITERS[summary.delimiter] ?? "comma"}`),
-          encoding: summary.encoding,
-        })}
+        {size} ·{" "}
+        {format.kind === "csv"
+          ? t("reports.csvInfo", {
+              delimiter: t(`reports.delimiter.${DELIMITERS[format.delimiter] ?? "comma"}`),
+              encoding: format.encoding,
+            })
+          : t("reports.sheetInfo", { sheet: format.sheet })}
       </div>
+      {format.kind === "spreadsheet" && format.sheets.length > 1 && (
+        <label className="mt-3 flex max-w-sm items-center gap-3 text-sm">
+          <span className="shrink-0 text-zinc-500">{t("reports.sheet")}</span>
+          <Select value={format.sheet} disabled={disabled} onChange={(e) => onSheet(e.target.value)}>
+            {format.sheets.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </Select>
+        </label>
+      )}
       <div className="mt-3 flex flex-wrap gap-1.5">
         {summary.columns.slice(0, SHOWN_COLUMNS).map((c) => (
           <Badge key={c.name}>

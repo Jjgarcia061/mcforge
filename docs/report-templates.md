@@ -2,7 +2,7 @@
 
 Reports are MCForge's core feature. The AI never writes the document itself, and never computes a figure:
 
-1. The data source is opened read-only. A CSV file is imported once into a cached SQLite table (delimiter, encoding, decimal commas and day-first dates are detected) and queried like any database.
+1. The data source is opened read-only. A CSV file or one sheet of a workbook (xlsx, xlsm, xlsb, xls, ods) is imported once into a cached SQLite table and queried like any database. The import detects the delimiter, encoding, decimal commas, day-first dates and title lines above the header; a workbook without a chosen sheet uses its first sheet with data.
 2. **Plan.** The model sees the columns, their ranges and a few rows, plus the user's question, and answers with sections: a title, one `SELECT` query and a chart type (`bar`, `line` or `table`). Queries run through the read-only database; failed ones go back to the model once to be fixed. Without an AI engine, simple rules pick a monthly trend and the main breakdowns instead.
 3. **Explain.** The model gets every result plus computed facts (highs, lows, shares, change) and writes the summary, key findings and one comment per section. It is told to use only those figures, written in the user's number format.
 4. **Render.** The template is filled deterministically: same data, same document.
