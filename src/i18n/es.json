@@ -82,7 +82,7 @@
       "openai": "OpenAI"
     },
     "apiKey": "Clave de API",
-    "keyHint": "Se valida con el proveedor y se guarda en el llavero de tu sistema. Nunca toca el disco.",
+    "keyHint": "Se valida con el proveedor y se guarda en el llavero de tu sistema.",
     "connect": "Conectar",
     "connecting": "Comprobando…",
     "keySaved": "Conectado con la clave de tu llavero",
@@ -169,7 +169,7 @@
     "connections": "Conexiones",
     "rules": "{{allow}} permitidas · {{ask}} preguntan antes · {{deny}} bloqueadas",
     "start": "Empezar",
-    "saved": "Tu configuración se guarda en este equipo. Las claves y contraseñas van al llavero del sistema.",
+    "saved": "Configuración guardada.",
     "saving": "Guardando…"
   },
   "error": {
@@ -187,7 +187,7 @@
     "title": "Reportes",
     "subtitle": "Convierte un archivo CSV o de Excel en un reporte con cifras, gráficas y conclusiones.",
     "data": "Datos",
-    "dataHint": "Elige un archivo CSV o de Excel. Se copia a una base local de solo lectura; el original no se modifica.",
+    "dataHint": "Elige un archivo CSV o de Excel.",
     "chooseFile": "Elegir archivo CSV o Excel…",
     "changeFile": "Cambiar archivo",
     "fileTypes": "CSV y hojas de cálculo",
@@ -255,7 +255,7 @@
     "stage": {
       "reading": "Leyendo los datos",
       "planning": "La IA está planeando los análisis",
-      "querying": "Consultando los datos (solo lectura)",
+      "querying": "Consultando los datos",
       "writing": "La IA está escribiendo las conclusiones",
       "rendering": "Armando el reporte"
     },
@@ -297,7 +297,7 @@
     "title": "Biblioteca",
     "subtitle": "Tus documentos, buscables y conectados. Pregunta y la IA responde citando de dónde sale cada dato.",
     "folders": "Carpetas",
-    "foldersHint": "Elige las carpetas con tus documentos (PDF, Word, Markdown, texto o HTML). MCForge solo las lee; nunca escribe en ellas.",
+    "foldersHint": "Elige las carpetas con tus documentos (PDF, Word, Markdown, texto o HTML).",
     "stats_one": "{{count}} documento · {{chunks}} fragmentos",
     "stats_other": "{{count}} documentos · {{chunks}} fragmentos",
     "failed_one": "{{count}} sin texto",
@@ -320,7 +320,7 @@
     "embedError": "La búsqueda por significado no quedó al día; mientras tanto se busca por palabras. Detalle: {{detail}}",
     "model": {
       "ready": "Búsqueda por significado activa",
-      "missing": "Para buscar por significado y no solo por palabras, descarga el modelo de búsqueda {{name}} ({{size}} GB). Funciona en tu equipo; tus documentos no salen de él.",
+      "missing": "Para buscar por significado y no solo por palabras, descarga el modelo de búsqueda {{name}} ({{size}} GB).",
       "download": "Descargar modelo de búsqueda",
       "offline": "Ollama no está abierto: por ahora se busca solo por palabras. Ábrelo para buscar también por significado."
     },
@@ -345,7 +345,6 @@
     "asking": "Buscando…",
     "noEngine": "Configura un motor de IA para hacer preguntas.",
     "apiNote": "Solo los fragmentos relevantes se envían a {{provider}}.",
-    "localNote": "Todo ocurre en tu equipo.",
     "nothingFound": "No encontré nada en tu biblioteca sobre eso."
   }
 }

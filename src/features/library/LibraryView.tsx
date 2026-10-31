@@ -312,13 +312,13 @@ export function LibraryView() {
               {asking && <Spinner />}
               {t(asking ? "library.asking" : "library.askButton")}
             </Button>
-            <span className="text-xs text-zinc-500">
-              {!engine
-                ? t("library.noEngine")
-                : engine.kind === "api"
+            {(!engine || engine.kind === "api") && (
+              <span className="text-xs text-zinc-500">
+                {engine
                   ? t("library.apiNote", { provider: engine.provider === "anthropic" ? "Anthropic" : "OpenAI" })
-                  : t("library.localNote")}
-            </span>
+                  : t("library.noEngine")}
+              </span>
+            )}
           </div>
           {askError && (
             <div className="mt-3">

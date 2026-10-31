@@ -82,7 +82,7 @@
       "openai": "OpenAI"
     },
     "apiKey": "API key",
-    "keyHint": "Checked with the provider, then stored in your system keychain. It never touches disk.",
+    "keyHint": "Checked with the provider, then stored in your system keychain.",
     "connect": "Connect",
     "connecting": "Checking…",
     "keySaved": "Connected with the key in your keychain",
@@ -169,7 +169,7 @@
     "connections": "Connections",
     "rules": "{{allow}} allowed · {{ask}} ask first · {{deny}} blocked",
     "start": "Start",
-    "saved": "Your setup is saved on this computer. Keys and passwords go to the system keychain.",
+    "saved": "Setup saved.",
     "saving": "Saving…"
   },
   "error": {
@@ -187,7 +187,7 @@
     "title": "Reports",
     "subtitle": "Turn a CSV or Excel file into a report with figures, charts and conclusions.",
     "data": "Data",
-    "dataHint": "Choose a CSV or Excel file. It is copied into a local read-only database; the original is never changed.",
+    "dataHint": "Choose a CSV or Excel file.",
     "chooseFile": "Choose CSV or Excel file…",
     "changeFile": "Change file",
     "fileTypes": "CSV and spreadsheets",
@@ -255,7 +255,7 @@
     "stage": {
       "reading": "Reading the data",
       "planning": "The AI is planning the analyses",
-      "querying": "Querying the data (read-only)",
+      "querying": "Querying the data",
       "writing": "The AI is writing the conclusions",
       "rendering": "Putting the report together"
     },
@@ -297,7 +297,7 @@
     "title": "Library",
     "subtitle": "Your documents, searchable and connected. Ask, and the AI answers citing where each fact comes from.",
     "folders": "Folders",
-    "foldersHint": "Choose the folders with your documents (PDF, Word, Markdown, text or HTML). MCForge only reads them; it never writes to them.",
+    "foldersHint": "Choose the folders with your documents (PDF, Word, Markdown, text or HTML).",
     "stats_one": "{{count}} document · {{chunks}} passages",
     "stats_other": "{{count}} documents · {{chunks}} passages",
     "failed_one": "{{count}} without text",
@@ -320,7 +320,7 @@
     "embedError": "Search by meaning is not up to date; words still work meanwhile. Detail: {{detail}}",
     "model": {
       "ready": "Search by meaning is on",
-      "missing": "To search by meaning and not just by words, download the search model {{name}} ({{size}} GB). It runs on your computer; your documents never leave it.",
+      "missing": "To search by meaning and not just by words, download the search model {{name}} ({{size}} GB).",
       "download": "Download search model",
       "offline": "Ollama is not open: for now search works by words only. Open it to search by meaning too."
     },
@@ -345,7 +345,6 @@
     "asking": "Searching…",
     "noEngine": "Set up an AI engine to ask questions.",
     "apiNote": "Only the relevant passages are sent to {{provider}}.",
-    "localNote": "Everything happens on your computer.",
     "nothingFound": "I found nothing in your library about that."
   }
 }
