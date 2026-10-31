@@ -204,6 +204,40 @@
     },
     "template": "Template",
     "usingTemplate": "Template: {{name}}",
+    "focusLabel": "Focus",
+    "focusNeedsAi": "Applies when the AI writes the report",
+    "focusPresets": "Presets",
+    "focusMine": "My focuses",
+    "focusNew": "New focus…",
+    "focusEdit": "Edit",
+    "focusDelete": "Delete",
+    "focusName": "Name",
+    "focusNamePlaceholder": "E.g. Purchasing committee",
+    "focusInstructions": "Instructions for the AI",
+    "focusInstructionsPlaceholder": "E.g. Write for the purchasing committee. Prioritise suppliers, unit cost and slow-moving products.",
+    "focusSave": "Save focus",
+    "focus": {
+      "general": {
+        "name": "General",
+        "description": "A balanced overview of the data."
+      },
+      "executive": {
+        "name": "Executive",
+        "description": "What matters for decisions: key figures, changes, risks and opportunities."
+      },
+      "finance": {
+        "name": "Finance",
+        "description": "Amounts, costs, discounts, margins and changes between periods."
+      },
+      "sales": {
+        "name": "Sales",
+        "description": "The products, regions, customers and sellers that drive results."
+      },
+      "operations": {
+        "name": "Operations",
+        "description": "Volumes, timing, peaks and possible bottlenecks."
+      }
+    },
     "question": "What do you want to know?",
     "optional": "Optional",
     "questionPlaceholder": "E.g. which products and regions sell the most? How do sales change month by month?",

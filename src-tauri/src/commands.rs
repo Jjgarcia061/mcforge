@@ -17,6 +17,7 @@ use crate::providers::chat::EngineModel;
 use crate::providers::ollama::{self, OllamaStatus, PullProgress};
 use crate::providers::{self, Provider};
 use crate::recommend::{self, Recommendation};
+use crate::reports::focus::{Focus, Focuses, SavedFocuses};
 use crate::reports::history::{History, ReportEntry};
 use crate::reports::{
     self, Ai, ReportOutcome, ReportRequest, ReportStage, TemplateInfo, Templates,
@@ -33,6 +34,7 @@ pub struct AppState {
     pub paths: Paths,
     pub setup: RwLock<Option<Setup>>,
     pub history: History,
+    pub focuses: Focuses,
     /// The report being generated, so `cancel_report` can stop it.
     pub running: Mutex<Option<AbortHandle>>,
 }
@@ -41,6 +43,7 @@ pub struct Paths {
     pub setup: PathBuf,
     pub cache: PathBuf,
     pub history: PathBuf,
+    pub focuses: PathBuf,
     /// Where reports go unless the `reports` connector says otherwise.
     pub default_reports: PathBuf,
 }
@@ -230,11 +233,34 @@ async fn report(
 
     let outcome =
         reports::generate(&state.templates, &source, ai, request, &out_dir, stage).await?;
-    // The report is written either way; a history that cannot be saved only forgets it on restart.
+    // The report is written either way; files that cannot be saved only forget it on restart.
+    if let Some(focus) = &request.focus {
+        let _ = state.focuses.remember(&focus.id);
+    }
     let _ = state
         .history
         .add(ReportEntry::new(&outcome, source.summary.name()));
     Ok(outcome)
+}
+
+/// The user's own report focuses and the one used last.
+#[tauri::command]
+#[specta::specta]
+pub fn list_focuses(state: State<'_, AppState>) -> SavedFocuses {
+    state.focuses.saved()
+}
+
+/// Creates (empty id) or updates a custom focus and returns it with its id.
+#[tauri::command]
+#[specta::specta]
+pub fn save_focus(state: State<'_, AppState>, focus: Focus) -> Result<Focus> {
+    state.focuses.save(focus)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn delete_focus(state: State<'_, AppState>, id: String) -> Result<()> {
+    state.focuses.delete(&id)
 }
 
 /// Reports generated on this computer whose files still exist, newest first.

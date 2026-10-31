@@ -23,6 +23,11 @@ export const commands = {
 	generateReport: (request: ReportRequest_Deserialize, onStage: Channel<ReportStage>) => typedError<ReportOutcome_Serialize, AppError>(__TAURI_INVOKE("generate_report", { request, onStage })),
 	/**  Stops the report being generated, which then fails as cancelled. */
 	cancelReport: () => __TAURI_INVOKE<void>("cancel_report"),
+	/**  The user's own report focuses and the one used last. */
+	listFocuses: () => __TAURI_INVOKE<SavedFocuses_Serialize>("list_focuses"),
+	/**  Creates (empty id) or updates a custom focus and returns it with its id. */
+	saveFocus: (focus: Focus) => typedError<Focus, AppError>(__TAURI_INVOKE("save_focus", { focus })),
+	deleteFocus: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("delete_focus", { id })),
 	/**  Reports generated on this computer whose files still exist, newest first. */
 	listReports: () => __TAURI_INVOKE<ReportEntry_Serialize[]>("list_reports"),
 	/**  Opens a report MCForge generated, or shows it in its folder. */
@@ -65,12 +70,14 @@ export type Catalog_Deserialize = {
 	connectors: Connector_Deserialize[],
 	useCases: UseCase[],
 	models: Models_Deserialize,
+	focuses: FocusPreset[],
 };
 
 export type Catalog_Serialize = {
 	connectors: Connector_Serialize[],
 	useCases: UseCase[],
 	models: Models_Serialize,
+	focuses: FocusPreset[],
 };
 
 export type Category = "files" | "data" | "reports" | "web" | "development" | "apps";
@@ -135,6 +142,19 @@ export type Field_Serialize = {
 };
 
 export type Fit = "smooth" | "usable" | "tooBig";
+
+/**  A focus as the UI resolved it: presets arrive with their localized name. */
+export type Focus = {
+	id: string,
+	name: string,
+	instructions: string,
+};
+
+/**  A built-in report focus; the UI names it, the model reads `instructions`. */
+export type FocusPreset = {
+	id: string,
+	instructions: string,
+};
 
 export type Hardware = {
 	os: string,
@@ -292,6 +312,8 @@ export type ReportRequest_Deserialize = {
 	template: string,
 	question?: string | null,
 	useAi: boolean,
+	/**  Who the report is for; it shapes the AI's analyses and conclusions. */
+	focus?: Focus | null,
 	language: string,
 	numberFormat: NumberFormat,
 };
@@ -304,6 +326,8 @@ export type ReportRequest_Serialize = {
 	template: string,
 	question: string | null,
 	useAi: boolean,
+	/**  Who the report is for; it shapes the AI's analyses and conclusions. */
+	focus: Focus | null,
 	language: string,
 	numberFormat: NumberFormat,
 };
@@ -314,6 +338,20 @@ export type ReportStage = "reading" | "planning" | "querying" | "writing" | "ren
 export type ReportWarning = { kind: "planFailed"; detail: string } | { kind: "queriesDropped"; detail: number } | { kind: "narrativeFailed"; detail: string };
 
 export type Risk = "read" | "write" | "destructive" | "network" | "send";
+
+export type SavedFocuses = SavedFocuses_Serialize | SavedFocuses_Deserialize;
+
+export type SavedFocuses_Deserialize = {
+	custom: Focus[],
+	/**  Preset or custom id of the focus used last. */
+	last?: string | null,
+};
+
+export type SavedFocuses_Serialize = {
+	custom: Focus[],
+	/**  Preset or custom id of the focus used last. */
+	last: string | null,
+};
 
 /**  How the MCP server is started. `{{field}}` placeholders are filled from user input. */
 export type Server = Server_Serialize | Server_Deserialize;

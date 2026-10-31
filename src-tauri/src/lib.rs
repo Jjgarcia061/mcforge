@@ -19,6 +19,7 @@ use tauri::Manager;
 use crate::catalog::Catalog;
 use crate::commands::{AppState, Paths};
 use crate::reports::Templates;
+use crate::reports::focus::Focuses;
 use crate::reports::history::History;
 
 /// Typed command registry; also generates `src/lib/bindings.ts` for the UI.
@@ -37,6 +38,9 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
         commands::inspect_source,
         commands::generate_report,
         commands::cancel_report,
+        commands::list_focuses,
+        commands::save_focus,
+        commands::delete_focus,
         commands::list_reports,
         commands::open_report,
     ])
@@ -67,6 +71,7 @@ pub fn run() {
                 setup: path.app_config_dir()?.join("setup.json"),
                 cache: path.app_cache_dir()?,
                 history: path.app_data_dir()?.join("reports.json"),
+                focuses: path.app_data_dir()?.join("focus.json"),
                 default_reports: path
                     .document_dir()
                     .or_else(|_| path.home_dir())?
@@ -75,6 +80,7 @@ pub fn run() {
             app.manage(AppState {
                 setup: RwLock::new(setup::load(&paths.setup, &catalog)?),
                 history: History::load(paths.history.clone()),
+                focuses: Focuses::load(paths.focuses.clone()),
                 templates: Templates::load(&resources.join("templates/reports"))?,
                 catalog,
                 hardware: hardware::detect()?,

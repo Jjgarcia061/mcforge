@@ -7,6 +7,8 @@ Reports are MCForge's core feature. The AI never writes the document itself, and
 3. **Explain.** The model gets every result plus computed facts (highs, lows, shares, change) and writes the summary, key findings and one comment per section. It is told to use only those figures, written in the user's number format.
 4. **Render.** The template is filled deterministically: same data, same document.
 
+A **focus** says who the report is for. Presets live in [`catalog/report-focus.toml`](../catalog/report-focus.toml) (names in the UI translations) and users can save their own; its instructions go into both the plan and the explanation prompts, so a finance focus picks different analyses than a sales one, not just different wording.
+
 Every model answer is requested as JSON matching a schema (Ollama `format`, OpenAI structured outputs, a forced tool call for Anthropic), and a failing step never blocks the report: it falls back to the rules and tells the user why.
 
 ## Template layout

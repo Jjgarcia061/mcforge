@@ -7,17 +7,20 @@ import {
   commands,
   errorMessage,
   unwrap,
+  type Focus,
   type NumberFormat,
   type ReportEntry,
   type ReportOutcome,
   type ReportStage,
   type ReportWarning,
+  type SavedFocuses,
   type SourceSummary,
   type TemplateInfo,
 } from "../../lib/api";
 import { useAppData } from "../../lib/data";
 import { modelName } from "../../lib/engine";
 import { useSession } from "../../lib/session";
+import { FocusPicker } from "./FocusPicker";
 import { RecentReports } from "./RecentReports";
 
 const STAGES: ReportStage[] = ["reading", "planning", "querying", "writing", "rendering"];
@@ -51,6 +54,8 @@ export function ReportsView() {
   const [useAi, setUseAi] = useState(true);
   const [run, setRun] = useState<Run | null>(null);
   const [history, setHistory] = useState<ReportEntry[]>([]);
+  const [focuses, setFocuses] = useState<SavedFocuses>({ custom: [], last: null });
+  const [focusId, setFocusId] = useState("general");
 
   const ai = useAi && engine !== undefined;
   const busy = run !== null && "stage" in run;
@@ -66,6 +71,7 @@ export function ReportsView() {
 
   useEffect(() => {
     void commands.listReports().then(setHistory);
+    void refreshFocuses(null);
   }, []);
 
   useEffect(() => {
@@ -79,6 +85,22 @@ export function ReportsView() {
       live = false;
     };
   }, [language]);
+
+  /** Reloads the saved focuses and selects `select`, or else the one used last. */
+  async function refreshFocuses(select: string | null) {
+    const saved = await commands.listFocuses();
+    setFocuses(saved);
+    const id = select ?? saved.last;
+    if (id) setFocusId(id);
+  }
+
+  /** The chosen focus with the name the report will show. */
+  function focus(): Focus | null {
+    const own = focuses.custom.find((f) => f.id === focusId);
+    if (own) return own;
+    const preset = catalog.focuses.find((f) => f.id === focusId);
+    return preset ? { id: preset.id, name: t(`reports.focus.${preset.id}.name`), instructions: preset.instructions } : null;
+  }
 
   async function chooseFile() {
     const path = await open({
@@ -123,6 +145,7 @@ export function ReportsView() {
             template,
             question: question.trim() || null,
             useAi: ai,
+            focus: ai ? focus() : null,
             language,
             numberFormat: numberFormat(),
           },
@@ -196,6 +219,16 @@ export function ReportsView() {
       )}
 
       <Card>
+        <div className="mb-4">
+          <FocusPicker
+            presets={catalog.focuses}
+            custom={focuses.custom}
+            value={focusId}
+            disabled={busy || !ai}
+            onChange={setFocusId}
+            onSaved={(id) => void refreshFocuses(id)}
+          />
+        </div>
         <label className="block">
           <Label hint={t("reports.optional")}>{t("reports.question")}</Label>
           <Textarea

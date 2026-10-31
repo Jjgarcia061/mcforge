@@ -8,6 +8,7 @@ use std::fmt::Write;
 use serde::Deserialize;
 use serde_json::{Value, json};
 
+use super::focus::Focus;
 use crate::database::{Database, QueryResult};
 use crate::error::{Error, Result};
 use crate::providers::chat::Model;
@@ -208,6 +209,30 @@ fn table_text(r: &QueryResult, max_rows: usize, fmt: Option<&dyn Fn(f64) -> Stri
     out
 }
 
+/// What the reader asked for: the request, who the report is for and its language.
+pub struct Brief<'a> {
+    pub request: &'a str,
+    /// The language's English name, as the model reads it.
+    pub language: &'a str,
+    pub focus: Option<&'a Focus>,
+}
+
+impl Brief<'_> {
+    /// The start of every prompt after the data: what to answer and for whom.
+    fn head(&self) -> String {
+        let mut head = format!("Request: {}\n", self.request);
+        if let Some(focus) = self.focus.filter(|f| !f.instructions.trim().is_empty()) {
+            let _ = writeln!(
+                head,
+                "Report focus ({}): {}\nChoose the analyses and write the conclusions for this reader.",
+                focus.name.trim(),
+                focus.instructions.trim()
+            );
+        }
+        head
+    }
+}
+
 const SYSTEM: &str = "You are a careful data analyst preparing a business report. \
 You can only read the data with SQLite SELECT queries over the table described. \
 Never invent columns, values or figures.";
@@ -258,12 +283,12 @@ fn plan_schema() -> Value {
 pub async fn ai_plan(
     model: &dyn Model,
     data: &str,
-    question: &str,
-    language: &str,
+    brief: &Brief<'_>,
     failures: &[(SectionPlan, String)],
 ) -> Result<(String, Vec<SectionPlan>)> {
+    let (head, language) = (brief.head(), brief.language);
     let mut prompt = format!(
-        "{data}\nRequest: {question}\n\n\
+        "{data}\n{head}\n\
          Plan a report that answers the request with 3 to 6 sections. For each section give a short title, \
          one SQLite query and a chart type:\n\
          - \"bar\": the query returns exactly 2 columns (label, number), at most 12 rows, largest first.\n\
@@ -429,12 +454,14 @@ fn narrative_schema() -> Value {
 pub async fn ai_narrative(
     model: &dyn Model,
     data: &str,
-    question: &str,
-    language: &str,
+    brief: &Brief<'_>,
     fmt: &(dyn Fn(f64) -> String + Sync),
     sections: &mut [Section],
 ) -> Result<Narrative> {
-    let mut prompt = format!("{data}\nRequest: {question}\n\nResults of the report's sections:\n");
+    let mut prompt = format!(
+        "{data}\n{}\nResults of the report's sections:\n",
+        brief.head()
+    );
     for (i, s) in sections.iter().enumerate() {
         let _ = write!(
             prompt,
@@ -449,12 +476,13 @@ pub async fn ai_narrative(
     }
     let _ = write!(
         prompt,
-        "\nWrite in {language}, for a business reader:\n\
+        "\nWrite in {language}, for the reader described above (a business reader if none is):\n\
          - summary: two or three short paragraphs (separated by a blank line) with the main conclusions, citing concrete figures.\n\
          - highlights: three to five one-line key findings.\n\
          - commentaries: exactly {n} entries, one or two sentences on each section above, in the same order.\n\
          Use only figures that appear in the results or the facts, written exactly as shown (for example {example}). \
          Base every statement about highs, lows, trends and shares on the facts.\n",
+        language = brief.language,
         n = sections.len(),
         example = fmt(1234567.89),
     );

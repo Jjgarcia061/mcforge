@@ -1,0 +1,24 @@
+# Report focuses: who a report is written for. The AI uses `instructions` to
+# choose the analyses and to write the conclusions; the user can also save
+# their own. Names and descriptions live in src/i18n/<lang>.json under
+# "reports.focus.<id>".
+
+[[focuses]]
+id = "general"
+instructions = ""
+
+[[focuses]]
+id = "executive"
+instructions = "Write for senior management. Lead with the few figures that matter most, what changed, the main risks and opportunities, and the decisions they suggest. Prefer totals, trends and shares over detail."
+
+[[focuses]]
+id = "finance"
+instructions = "Write for a finance team. Focus on amounts: revenue, costs, prices, discounts and margins where the data has them, changes between periods, concentration in a few items, and anything that looks unusual. Be precise and conservative."
+
+[[focuses]]
+id = "sales"
+instructions = "Write for a sales team. Focus on which products, regions, customers and sellers drive the results, which ones grow or decline over time, and where the next opportunities are."
+
+[[focuses]]
+id = "operations"
+instructions = "Write for an operations team. Focus on volumes, units and counts, how they spread over time and across locations or people, peaks and dips, and possible bottlenecks."

@@ -3,13 +3,12 @@
 //! opens files it wrote itself.
 
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, MutexGuard, PoisonError};
 
 use serde::{Deserialize, Serialize};
 
 use super::ReportOutcome;
-use crate::atomic;
-use crate::error::{Error, Result};
+use crate::atomic::Stored;
+use crate::error::Result;
 
 const MAX_ENTRIES: usize = 200;
 
@@ -39,50 +38,35 @@ impl ReportEntry {
     }
 }
 
-pub struct History {
-    path: PathBuf,
-    entries: Mutex<Vec<ReportEntry>>,
-}
+pub struct History(Stored<Vec<ReportEntry>>);
 
 impl History {
-    /// A missing or unreadable file starts an empty history; it never stops the app.
     pub fn load(path: PathBuf) -> Self {
-        let entries = std::fs::read(&path)
-            .ok()
-            .and_then(|json| serde_json::from_slice(&json).ok())
-            .unwrap_or_default();
-        Self {
-            path,
-            entries: Mutex::new(entries),
-        }
+        Self(Stored::load(path))
     }
 
-    /// Kept in memory even if saving fails, so the report still opens this session.
     pub fn add(&self, entry: ReportEntry) -> Result<()> {
-        let mut entries = self.entries();
-        entries.retain(|e| e.path != entry.path);
-        entries.insert(0, entry);
-        entries.truncate(MAX_ENTRIES);
-        let json = serde_json::to_vec_pretty(&*entries).map_err(|e| Error::Io(e.to_string()))?;
-        atomic::write(&self.path, &json)
+        self.0.update(|entries| {
+            entries.retain(|e| e.path != entry.path);
+            entries.insert(0, entry);
+            entries.truncate(MAX_ENTRIES);
+        })
     }
 
     /// Entries whose file still exists.
     pub fn list(&self) -> Vec<ReportEntry> {
-        self.entries()
-            .iter()
-            .filter(|e| Path::new(&e.path).is_file())
-            .cloned()
-            .collect()
+        self.0.read(|entries| {
+            entries
+                .iter()
+                .filter(|e| Path::new(&e.path).is_file())
+                .cloned()
+                .collect()
+        })
     }
 
     pub fn contains(&self, path: &Path) -> bool {
-        self.entries().iter().any(|e| Path::new(&e.path) == path)
-    }
-
-    fn entries(&self) -> MutexGuard<'_, Vec<ReportEntry>> {
-        // Every update leaves a valid list, so one interrupted by a panic is still usable.
-        self.entries.lock().unwrap_or_else(PoisonError::into_inner)
+        self.0
+            .read(|entries| entries.iter().any(|e| Path::new(&e.path) == path))
     }
 }
 

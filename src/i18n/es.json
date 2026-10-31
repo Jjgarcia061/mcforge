@@ -204,6 +204,40 @@
     },
     "template": "Plantilla",
     "usingTemplate": "Plantilla: {{name}}",
+    "focusLabel": "Enfoque",
+    "focusNeedsAi": "Se aplica cuando la IA escribe el reporte",
+    "focusPresets": "Predefinidos",
+    "focusMine": "Mis enfoques",
+    "focusNew": "Nuevo enfoque…",
+    "focusEdit": "Editar",
+    "focusDelete": "Eliminar",
+    "focusName": "Nombre",
+    "focusNamePlaceholder": "Ej.: Comité de compras",
+    "focusInstructions": "Instrucciones para la IA",
+    "focusInstructionsPlaceholder": "Ej.: Escribe para el comité de compras. Prioriza proveedores, costo por unidad y productos con poco movimiento.",
+    "focusSave": "Guardar enfoque",
+    "focus": {
+      "general": {
+        "name": "General",
+        "description": "Un resumen equilibrado de los datos."
+      },
+      "executive": {
+        "name": "Dirección",
+        "description": "Lo esencial para decidir: cifras clave, cambios, riesgos y oportunidades."
+      },
+      "finance": {
+        "name": "Finanzas",
+        "description": "Importes, costos, descuentos, márgenes y variaciones entre periodos."
+      },
+      "sales": {
+        "name": "Ventas",
+        "description": "Productos, regiones, clientes y vendedores que mueven los resultados."
+      },
+      "operations": {
+        "name": "Operaciones",
+        "description": "Volúmenes, tiempos, picos y posibles cuellos de botella."
+      }
+    },
     "question": "¿Qué quieres saber?",
     "optional": "Opcional",
     "questionPlaceholder": "Ej.: ¿qué productos y regiones venden más? ¿Cómo cambian las ventas cada mes?",

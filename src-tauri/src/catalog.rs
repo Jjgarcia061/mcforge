@@ -16,6 +16,7 @@ pub struct Catalog {
     pub connectors: Vec<Connector>,
     pub use_cases: Vec<UseCase>,
     pub models: Models,
+    pub focuses: Vec<FocusPreset>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, specta::Type)]
@@ -169,6 +170,14 @@ pub struct UseCase {
     pub connectors: Vec<String>,
 }
 
+/// A built-in report focus; the UI names it, the model reads `instructions`.
+#[derive(Debug, Clone, Deserialize, Serialize, specta::Type)]
+#[serde(deny_unknown_fields)]
+pub struct FocusPreset {
+    pub id: String,
+    pub instructions: String,
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize, specta::Type)]
 #[serde(deny_unknown_fields)]
 pub struct Models {
@@ -214,6 +223,12 @@ struct UseCaseFile {
     use_cases: Vec<UseCase>,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct FocusFile {
+    focuses: Vec<FocusPreset>,
+}
+
 impl Catalog {
     pub fn load(dir: &Path) -> Result<Self> {
         let mut files: Vec<_> = std::fs::read_dir(dir.join("connectors"))?
@@ -242,6 +257,7 @@ impl Catalog {
             connectors,
             use_cases: parse::<UseCaseFile>(&dir.join("use-cases.toml"))?.use_cases,
             models: parse(&dir.join("models.toml"))?,
+            focuses: parse::<FocusFile>(&dir.join("report-focus.toml"))?.focuses,
         };
         catalog.validate()?;
         Ok(catalog)
@@ -310,6 +326,17 @@ impl Catalog {
                     "model `{}` needs positive size and parameters",
                     m.id
                 ));
+            }
+        }
+
+        let mut focuses = HashSet::new();
+        for f in &self.focuses {
+            // Saved focuses get `custom-` ids, so presets must not use that prefix.
+            if f.id.is_empty() || f.id.starts_with(crate::reports::focus::CUSTOM_PREFIX) {
+                problems.push(format!("invalid focus id `{}`", f.id));
+            }
+            if !focuses.insert(f.id.as_str()) {
+                problems.push(format!("duplicate focus `{}`", f.id));
             }
         }
 

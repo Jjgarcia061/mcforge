@@ -4,6 +4,7 @@
 
 pub mod analysis;
 pub mod chart;
+pub mod focus;
 pub mod history;
 
 use std::collections::HashMap;
@@ -13,8 +14,9 @@ use minijinja::value::Serde;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use self::analysis::{ChartKind, Narrative, Section, Titles};
+use self::analysis::{Brief, ChartKind, Narrative, Section, Titles};
 use self::chart::Point;
+use self::focus::Focus;
 use crate::database::{Database, QueryResult};
 use crate::error::{Error, Result};
 use crate::providers::chat::Model;
@@ -185,6 +187,8 @@ pub struct ReportRequest {
     pub template: String,
     pub question: Option<String>,
     pub use_ai: bool,
+    /// Who the report is for; it shapes the AI's analyses and conclusions.
+    pub focus: Option<Focus>,
     pub language: String,
     pub number_format: NumberFormat,
 }
@@ -244,8 +248,11 @@ pub async fn generate(
         .as_deref()
         .map(str::trim)
         .filter(|q| !q.is_empty());
-    let ask = question.unwrap_or(DEFAULT_REQUEST);
-    let language = language_name(&request.language);
+    let brief = Brief {
+        request: question.unwrap_or(DEFAULT_REQUEST),
+        language: language_name(&request.language),
+        focus: request.focus.as_ref(),
+    };
     let data = analysis::describe(summary, &profile, &preview);
 
     let mut warnings = Vec::new();
@@ -254,7 +261,7 @@ pub async fn generate(
     let mut sections = Vec::new();
     if let Some(ai) = &ai {
         on_stage(ReportStage::Planning);
-        match plan_with_ai(ai.model, &db, &data, ask, language, &on_stage).await {
+        match plan_with_ai(ai.model, &db, &data, &brief, &on_stage).await {
             Ok((t, s, dropped)) => {
                 (title, sections, ai_used) = (t, s, true);
                 if dropped > 0 {
@@ -284,7 +291,7 @@ pub async fn generate(
     {
         on_stage(ReportStage::Writing);
         let fmt = |v: f64| request.number_format.format(v);
-        match analysis::ai_narrative(ai.model, &data, ask, language, &fmt, &mut sections).await {
+        match analysis::ai_narrative(ai.model, &data, &brief, &fmt, &mut sections).await {
             Ok(n) => (narrative, ai_used) = (n, true),
             Err(e) => warnings.push(ReportWarning::NarrativeFailed(e.to_string())),
         }
@@ -306,6 +313,11 @@ pub async fn generate(
             title: &title,
             question,
             engine: engine.as_deref(),
+            // Only a focus the AI actually followed is worth naming.
+            focus: brief
+                .focus
+                .filter(|f| ai_used && !f.instructions.trim().is_empty())
+                .map(|f| f.name.trim()),
             profile: &profile,
             preview: &preview,
             sections: &sections,
@@ -341,16 +353,15 @@ async fn plan_with_ai(
     model: &dyn Model,
     db: &Database,
     data: &str,
-    ask: &str,
-    language: &str,
+    brief: &Brief<'_>,
     on_stage: &(impl Fn(ReportStage) + Send + Sync),
 ) -> Result<(String, Vec<Section>, u32)> {
-    let (title, plans) = analysis::ai_plan(model, data, ask, language, &[]).await?;
+    let (title, plans) = analysis::ai_plan(model, data, brief, &[]).await?;
     on_stage(ReportStage::Querying);
     let (mut sections, mut failures) = analysis::run(db, plans).await;
     if !failures.is_empty() {
         on_stage(ReportStage::Planning);
-        if let Ok((_, retry)) = analysis::ai_plan(model, data, ask, language, &failures).await {
+        if let Ok((_, retry)) = analysis::ai_plan(model, data, brief, &failures).await {
             on_stage(ReportStage::Querying);
             let (again, still) = analysis::run(db, retry).await;
             if again.len() > sections.len() {
@@ -390,6 +401,7 @@ struct Page<'a> {
     title: &'a str,
     question: Option<&'a str>,
     engine: Option<&'a str>,
+    focus: Option<&'a str>,
     profile: &'a [ColumnProfile],
     preview: &'a QueryResult,
     sections: &'a [Section],
@@ -405,6 +417,7 @@ struct Context<'a> {
     title: &'a str,
     question: Option<&'a str>,
     engine: Option<&'a str>,
+    focus: Option<&'a str>,
     file: String,
     generated_at: String,
     summary: &'a [String],
@@ -542,6 +555,7 @@ fn render(template: &Template, locale: &Locale, page: &Page) -> Result<String> {
         title: page.title,
         question: page.question,
         engine: page.engine,
+        focus: page.focus,
         file: summary.name(),
         generated_at: chrono::Local::now().format("%Y-%m-%d %H:%M").to_string(),
         summary: &page.narrative.summary,
@@ -621,18 +635,32 @@ mod tests {
     use super::*;
     use crate::providers::chat::EngineModel;
 
-    /// A model that replays canned answers, so the whole pipeline runs offline.
-    struct Scripted(Mutex<VecDeque<Result<Value>>>);
+    /// A model that replays canned answers and keeps the prompts it got, so the
+    /// whole pipeline runs offline.
+    struct Scripted {
+        answers: Mutex<VecDeque<Result<Value>>>,
+        prompts: Mutex<Vec<String>>,
+    }
+
+    impl Scripted {
+        fn new(answers: impl IntoIterator<Item = Result<Value>>) -> Self {
+            Self {
+                answers: Mutex::new(answers.into_iter().collect()),
+                prompts: Mutex::default(),
+            }
+        }
+    }
 
     impl Model for Scripted {
         fn json<'a>(
             &'a self,
             _: &'a str,
-            _: &'a str,
+            prompt: &'a str,
             _: &'a Value,
         ) -> BoxFuture<'a, Result<Value>> {
+            self.prompts.lock().unwrap().push(prompt.to_owned());
             let next = self
-                .0
+                .answers
                 .lock()
                 .unwrap()
                 .pop_front()
@@ -667,6 +695,7 @@ mod tests {
             template: "data-overview".into(),
             question: question.map(str::to_owned),
             use_ai,
+            focus: None,
             language: "es".into(),
             number_format: NumberFormat {
                 decimal: ".".into(),
@@ -781,7 +810,7 @@ mod tests {
     async fn ai_plans_are_run_read_only_and_repaired_once() {
         let dir = std::env::temp_dir().join(format!("mcforge-report-ai-{}", std::process::id()));
         let source = sales(&dir).await;
-        let model = Scripted(Mutex::new(VecDeque::from([
+        let model = Scripted::new([
             Ok(json!({ "title": "Ventas del trimestre", "sections": [
                 { "title": "Por producto", "sql": "SELECT producto, SUM(total) FROM ventas GROUP BY 1 ORDER BY 2 DESC", "chart": "bar" },
                 { "title": "Borrar", "sql": "DELETE FROM ventas", "chart": "table" },
@@ -796,7 +825,7 @@ mod tests {
                 "highlights": ["- Laptop: 3,650.50"],
                 "commentaries": ["Laptop encabeza.", "Norte lidera."],
             })),
-        ])));
+        ]);
         let stages = Mutex::new(Vec::new());
         let ai = Ai {
             model: &model,
@@ -849,6 +878,44 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn the_focus_reaches_both_prompts_and_the_header() {
+        let dir = std::env::temp_dir().join(format!("mcforge-report-focus-{}", std::process::id()));
+        let source = sales(&dir).await;
+        let model = Scripted::new([
+            Ok(json!({ "title": "Márgenes", "sections": [
+                { "title": "Por producto", "sql": "SELECT producto, SUM(total) FROM ventas GROUP BY 1 ORDER BY 2 DESC", "chart": "bar" },
+            ]})),
+            Ok(
+                json!({ "summary": "Laptop deja más.", "highlights": [], "commentaries": ["Laptop."] }),
+            ),
+        ]);
+        let mut req = request(true, None);
+        req.focus = Some(Focus {
+            id: "finance".into(),
+            name: "Finanzas".into(),
+            instructions: "Write for a finance team.".into(),
+        });
+        let ai = Ai {
+            model: &model,
+            label: "x",
+        };
+        let outcome = generate(&templates(), &source, Some(ai), &req, &dir, |_| {})
+            .await
+            .unwrap();
+        let prompts = model.prompts.into_inner().unwrap();
+        assert_eq!(prompts.len(), 2, "one plan, one narrative");
+        for prompt in &prompts {
+            assert!(
+                prompt.contains("Report focus (Finanzas): Write for a finance team."),
+                "{prompt}"
+            );
+        }
+        let html = std::fs::read_to_string(&outcome.path).unwrap();
+        assert!(html.contains("Enfoque: Finanzas"));
+        std::fs::remove_dir_all(dir).ok();
+    }
+
+    #[tokio::test]
     async fn a_cancelled_report_stops_waiting_and_writes_nothing() {
         use futures_util::future::{AbortHandle, Abortable};
         let dir = std::env::temp_dir().join(format!("mcforge-report-abort-{}", std::process::id()));
@@ -874,10 +941,10 @@ mod tests {
     async fn a_failing_model_still_yields_a_report() {
         let dir = std::env::temp_dir().join(format!("mcforge-report-down-{}", std::process::id()));
         let source = sales(&dir).await;
-        let model = Scripted(Mutex::new(VecDeque::from([
+        let model = Scripted::new([
             Err(Error::Provider("Ollama is not running.".into())),
             Err(Error::Provider("Ollama is not running.".into())),
-        ])));
+        ]);
         let ai = Ai {
             model: &model,
             label: "x",

@@ -86,6 +86,7 @@
       <span>{{ t.source }}: {{ file }}</span>
       <span>{{ t.generated }}: {{ generated_at }}</span>
       {% if engine %}<span>{{ t.engine }}: {{ engine }}</span>{% endif %}
+      {% if focus %}<span>{{ t.focus }}: {{ focus }}</span>{% endif %}
     </div>
     {% if question %}
     <div class="question"><small>{{ t.question }}</small>{{ question }}</div>

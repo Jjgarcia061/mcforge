@@ -37,6 +37,7 @@ const catalog: Catalog = {
     { id: "custom", connectors: [] },
   ],
   models: { local: [], api: [] },
+  focuses: [],
 };
 
 const state = () => useWizard.getState();
