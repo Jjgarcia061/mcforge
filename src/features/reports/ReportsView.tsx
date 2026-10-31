@@ -112,6 +112,7 @@ export function ReportsView() {
     const channel = new Channel<ReportStage>();
     channel.onmessage = (stage) => !finished && setRun({ stage });
     cancelling.current = false;
+    setSourceError(null);
     setRun({ stage: "reading" });
     try {
       const outcome = await unwrap(
@@ -277,13 +278,13 @@ function SourcePreview({
     <div className="mb-4">
       <div className="font-mono text-sm">{summary.file}</div>
       <div className="mt-0.5 text-xs text-zinc-500">
-        {size} ·{" "}
+        {size}
         {format.kind === "csv"
-          ? t("reports.csvInfo", {
+          ? ` · ${t("reports.csvInfo", {
               delimiter: t(`reports.delimiter.${DELIMITERS[format.delimiter] ?? "comma"}`),
               encoding: format.encoding,
-            })
-          : t("reports.sheetInfo", { sheet: format.sheet })}
+            })}`
+          : format.sheets.length < 2 && ` · ${t("reports.sheetInfo", { sheet: format.sheet })}`}
       </div>
       {format.kind === "spreadsheet" && format.sheets.length > 1 && (
         <label className="mt-3 flex max-w-sm items-center gap-3 text-sm">
