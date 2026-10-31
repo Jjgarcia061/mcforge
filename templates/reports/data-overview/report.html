@@ -47,6 +47,7 @@
   .figure div { font-size: 22px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
   .figure small { color: var(--muted); font-size: 13px; }
   .summary p { margin: 0 0 12px; }
+  .summary .documents { margin: 16px 0 0; color: var(--muted); font-size: 13px; }
   .highlights { margin: 16px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; }
   .highlights li { padding: 10px 14px 10px 36px; background: var(--soft); border-radius: 10px; position: relative; }
   .highlights li::before { content: ""; position: absolute; left: 16px; top: 19px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
@@ -112,6 +113,7 @@
         {% for h in highlights %}<li>{{ h }}</li>{% endfor %}
       </ul>
       {% endif %}
+      {% if documents %}<p class="documents">{{ t.documents }}: {{ documents | join(", ") }}</p>{% endif %}
     </section>
     {% endif %}
 

@@ -15,7 +15,7 @@ use crate::database;
 use crate::error::{Error, Result};
 use crate::hardware::Hardware;
 use crate::library::{
-    Answer, Graph, Library, LibraryStatus, OllamaEmbedder, Progress, UpdateSummary,
+    Answer, Embedder, Graph, Library, LibraryStatus, OllamaEmbedder, Progress, UpdateSummary,
 };
 use crate::providers::chat::EngineModel;
 use crate::providers::ollama::{self, OllamaStatus, PullProgress};
@@ -24,7 +24,7 @@ use crate::recommend::{self, Recommendation};
 use crate::reports::focus::{Focus, Focuses, SavedFocuses};
 use crate::reports::history::{History, ReportEntry};
 use crate::reports::{
-    self, Ai, ReportOutcome, ReportRequest, ReportStage, TemplateInfo, Templates,
+    self, Ai, ReportOutcome, ReportRequest, ReportStage, Snippet, TemplateInfo, Templates,
 };
 use crate::secrets;
 use crate::setup::{self, Engine, Setup};
@@ -251,8 +251,21 @@ async fn report(
         label: &label,
     });
 
-    let outcome =
-        reports::generate(&state.templates, &source, ai, request, &out_dir, stage).await?;
+    let context = if ai.is_some() && request.use_library {
+        library_context(state, request, &source.summary).await
+    } else {
+        Vec::new()
+    };
+    let outcome = reports::generate(
+        &state.templates,
+        &source,
+        ai,
+        request,
+        &context,
+        &out_dir,
+        stage,
+    )
+    .await?;
     // The report is written either way; files that cannot be saved only forget it on restart.
     if let Some(focus) = &request.focus {
         let _ = state.focuses.remember(&focus.id);
@@ -379,6 +392,44 @@ pub async fn ask_library(
 #[specta::specta]
 pub async fn library_graph(state: State<'_, AppState>) -> Result<Graph> {
     state.library.graph().await
+}
+
+/// Library passages that bear on a report, found by its question (or the
+/// file's name and columns when there is none) and its focus.
+async fn library_context(
+    state: &AppState,
+    request: &ReportRequest,
+    summary: &SourceSummary,
+) -> Vec<Snippet> {
+    const PASSAGES: usize = 4;
+    const MAX_CHARS: usize = 900;
+    let mut query = request.question.clone().unwrap_or_default();
+    if query.trim().is_empty() {
+        query = std::iter::once(summary.file.as_str())
+            .chain(summary.columns.iter().map(|c| c.label.as_str()))
+            .collect::<Vec<_>>()
+            .join(" ");
+    }
+    if let Some(focus) = &request.focus {
+        query = format!("{query} {}", focus.name);
+    }
+    let (_, embedder) = embedder(state).await;
+    // Context is a bonus: a library that cannot be searched does not stop the report.
+    state
+        .library
+        .search(
+            embedder.as_ref().map(|e| e as &dyn Embedder),
+            &query,
+            PASSAGES,
+        )
+        .await
+        .unwrap_or_default()
+        .into_iter()
+        .map(|p| Snippet {
+            title: p.title,
+            text: p.text.chars().take(MAX_CHARS).collect(),
+        })
+        .collect()
 }
 
 /// The user's own report focuses and the one used last.

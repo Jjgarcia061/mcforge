@@ -14,6 +14,7 @@ use minijinja::value::Serde;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+pub use self::analysis::Snippet;
 use self::analysis::{Brief, ChartKind, Narrative, Section, Titles};
 use self::chart::Point;
 use self::focus::Focus;
@@ -189,6 +190,8 @@ pub struct ReportRequest {
     pub use_ai: bool,
     /// Who the report is for; it shapes the AI's analyses and conclusions.
     pub focus: Option<Focus>,
+    /// Give the AI relevant passages from the user's document library.
+    pub use_library: bool,
     pub language: String,
     pub number_format: NumberFormat,
 }
@@ -234,6 +237,7 @@ pub async fn generate(
     source: &FileSource,
     ai: Option<Ai<'_>>,
     request: &ReportRequest,
+    context: &[Snippet],
     out_dir: &Path,
     on_stage: impl Fn(ReportStage) + Send + Sync,
 ) -> Result<ReportOutcome> {
@@ -252,6 +256,7 @@ pub async fn generate(
         request: question.unwrap_or(DEFAULT_REQUEST),
         language: language_name(&request.language),
         focus: request.focus.as_ref(),
+        context,
     };
     let data = analysis::describe(summary, &profile, &preview);
 
@@ -318,6 +323,11 @@ pub async fn generate(
                 .focus
                 .filter(|f| ai_used && !f.instructions.trim().is_empty())
                 .map(|f| f.name.trim()),
+            documents: &if ai_used {
+                documents(context)
+            } else {
+                Vec::new()
+            },
             profile: &profile,
             preview: &preview,
             sections: &sections,
@@ -385,6 +395,17 @@ async fn plan_with_ai(
     ))
 }
 
+/// Each document once, in the order the passages came.
+fn documents(context: &[Snippet]) -> Vec<String> {
+    let mut titles: Vec<String> = Vec::new();
+    for s in context {
+        if !titles.contains(&s.title) {
+            titles.push(s.title.clone());
+        }
+    }
+    titles
+}
+
 /// The English name of a UI language code, as prompts name it.
 pub(crate) fn language_name(code: &str) -> &'static str {
     match code.split(['-', '_']).next().unwrap_or(code) {
@@ -403,6 +424,8 @@ struct Page<'a> {
     question: Option<&'a str>,
     engine: Option<&'a str>,
     focus: Option<&'a str>,
+    /// Titles of the documents the AI was given as context.
+    documents: &'a [String],
     profile: &'a [ColumnProfile],
     preview: &'a QueryResult,
     sections: &'a [Section],
@@ -419,6 +442,7 @@ struct Context<'a> {
     question: Option<&'a str>,
     engine: Option<&'a str>,
     focus: Option<&'a str>,
+    documents: &'a [String],
     file: String,
     generated_at: String,
     summary: &'a [String],
@@ -557,6 +581,7 @@ fn render(template: &Template, locale: &Locale, page: &Page) -> Result<String> {
         question: page.question,
         engine: page.engine,
         focus: page.focus,
+        documents: page.documents,
         file: summary.name(),
         generated_at: chrono::Local::now().format("%Y-%m-%d %H:%M").to_string(),
         summary: &page.narrative.summary,
@@ -697,6 +722,7 @@ mod tests {
             question: question.map(str::to_owned),
             use_ai,
             focus: None,
+            use_library: false,
             language: "es".into(),
             number_format: NumberFormat {
                 decimal: ".".into(),
@@ -761,6 +787,7 @@ mod tests {
             &source,
             None,
             &request(false, None),
+            &[],
             &dir,
             |_| {},
         )
@@ -792,6 +819,7 @@ mod tests {
             &source,
             None,
             &request(false, None),
+            &[],
             &dir,
             |_| {},
         )
@@ -837,6 +865,7 @@ mod tests {
             &source,
             Some(ai),
             &request(true, Some("¿Qué se vende más?")),
+            &[],
             &dir,
             |s| stages.lock().unwrap().push(format!("{s:?}")),
         )
@@ -879,7 +908,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn the_focus_reaches_both_prompts_and_the_header() {
+    async fn the_focus_and_context_reach_both_prompts_and_the_header() {
         let dir = std::env::temp_dir().join(format!("mcforge-report-focus-{}", std::process::id()));
         let source = sales(&dir).await;
         let model = Scripted::new([
@@ -896,13 +925,25 @@ mod tests {
             name: "Finanzas".into(),
             instructions: "Write for a finance team.".into(),
         });
+        let context = [Snippet {
+            title: "metas-2026".into(),
+            text: "La meta de ventas de laptops es de 5,000.".into(),
+        }];
         let ai = Ai {
             model: &model,
             label: "x",
         };
-        let outcome = generate(&templates(), &source, Some(ai), &req, &dir, |_| {})
-            .await
-            .unwrap();
+        let outcome = generate(
+            &templates(),
+            &source,
+            Some(ai),
+            &req,
+            &context,
+            &dir,
+            |_| {},
+        )
+        .await
+        .unwrap();
         let prompts = model.prompts.into_inner().unwrap();
         assert_eq!(prompts.len(), 2, "one plan, one narrative");
         for prompt in &prompts {
@@ -910,9 +951,14 @@ mod tests {
                 prompt.contains("Report focus (Finanzas): Write for a finance team."),
                 "{prompt}"
             );
+            assert!(
+                prompt.contains("[metas-2026] La meta de ventas"),
+                "{prompt}"
+            );
         }
         let html = std::fs::read_to_string(&outcome.path).unwrap();
         assert!(html.contains("Enfoque: Finanzas"));
+        assert!(html.contains("Documentos consultados: metas-2026"));
         std::fs::remove_dir_all(dir).ok();
     }
 
@@ -928,11 +974,19 @@ mod tests {
             model: &Stuck,
             label: "x",
         };
-        let work = generate(&templates, &source, Some(ai), &request, &out, |stage| {
-            if matches!(stage, ReportStage::Planning) {
-                handle.abort();
-            }
-        });
+        let work = generate(
+            &templates,
+            &source,
+            Some(ai),
+            &request,
+            &[],
+            &out,
+            |stage| {
+                if matches!(stage, ReportStage::Planning) {
+                    handle.abort();
+                }
+            },
+        );
         assert!(Abortable::new(work, registration).await.is_err());
         assert!(!out.exists(), "no report file is left behind");
         std::fs::remove_dir_all(dir).ok();
@@ -955,6 +1009,7 @@ mod tests {
             &source,
             Some(ai),
             &request(true, None),
+            &[],
             &dir,
             |_| {},
         )
@@ -1005,6 +1060,7 @@ mod tests {
                 label: &model,
             }),
             &req,
+            &[],
             &dir,
             |s| {
                 eprintln!("{:>6.1}s {s:?}", started.elapsed().as_secs_f64());

@@ -438,6 +438,8 @@ export type ReportRequest_Deserialize = {
 	useAi: boolean,
 	/**  Who the report is for; it shapes the AI's analyses and conclusions. */
 	focus?: Focus | null,
+	/**  Give the AI relevant passages from the user's document library. */
+	useLibrary: boolean,
 	language: string,
 	numberFormat: NumberFormat,
 };
@@ -452,6 +454,8 @@ export type ReportRequest_Serialize = {
 	useAi: boolean,
 	/**  Who the report is for; it shapes the AI's analyses and conclusions. */
 	focus: Focus | null,
+	/**  Give the AI relevant passages from the user's document library. */
+	useLibrary: boolean,
 	language: string,
 	numberFormat: NumberFormat,
 };

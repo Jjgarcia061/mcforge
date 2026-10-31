@@ -58,6 +58,8 @@ export function ReportsView() {
   const [focuses, setFocuses] = useState<SavedFocuses>({ custom: [], last: null });
   const [focusId, setFocusId] = useState("general");
   const [viewing, setViewing] = useState<ViewedReport | null>(null);
+  const [libraryFiles, setLibraryFiles] = useState(0);
+  const [useLibrary, setUseLibrary] = useState(true);
 
   const ai = useAi && engine !== undefined;
   const busy = run !== null && "stage" in run;
@@ -74,6 +76,7 @@ export function ReportsView() {
   useEffect(() => {
     void commands.listReports().then(setHistory);
     void refreshFocuses(null);
+    void commands.libraryStatus().then((r) => r.status === "ok" && setLibraryFiles(r.data.status.files));
   }, []);
 
   useEffect(() => {
@@ -148,6 +151,7 @@ export function ReportsView() {
             question: question.trim() || null,
             useAi: ai,
             focus: ai ? focus() : null,
+            useLibrary: ai && useLibrary && libraryFiles > 0,
             language,
             numberFormat: numberFormat(),
           },
@@ -262,6 +266,21 @@ export function ReportsView() {
             </label>
           ) : (
             <p className="text-zinc-500">{t("reports.noEngine")}</p>
+          )}
+          {engine && libraryFiles > 0 && (
+            <label className="mt-3 flex items-start gap-2.5">
+              <input
+                type="checkbox"
+                className="mt-0.5 size-4 accent-orange-600"
+                checked={useLibrary}
+                disabled={busy || !ai}
+                onChange={(e) => setUseLibrary(e.target.checked)}
+              />
+              <span>
+                {t("reports.useLibrary")}
+                <span className="block text-xs text-zinc-500">{t("reports.useLibraryHint", { count: libraryFiles })}</span>
+              </span>
+            </label>
           )}
         </div>
       </Card>

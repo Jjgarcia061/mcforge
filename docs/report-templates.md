@@ -9,6 +9,8 @@ Reports are MCForge's core feature. The AI never writes the document itself, and
 
 A **focus** says who the report is for. Presets live in [`catalog/report-focus.toml`](../catalog/report-focus.toml) (names in the UI translations) and users can save their own; its instructions go into both the plan and the explanation prompts, so a finance focus picks different analyses than a sales one, not just different wording.
 
+With **Use my library as context**, the few library passages most related to the report (found by its question, or the file's name and columns, plus the focus) go into both prompts too. The model may use them to frame the analysis and may quote their figures only naming the document; the report lists the documents it was given under "Documents consulted".
+
 Every model answer is requested as JSON matching a schema (Ollama `format`, OpenAI structured outputs, a forced tool call for Anthropic), and a failing step never blocks the report: it falls back to the rules and tells the user why.
 
 ## Template layout

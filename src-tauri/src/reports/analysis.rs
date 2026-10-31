@@ -215,6 +215,15 @@ pub struct Brief<'a> {
     /// The language's English name, as the model reads it.
     pub language: &'a str,
     pub focus: Option<&'a Focus>,
+    /// Passages from the user's documents that bear on the request.
+    pub context: &'a [Snippet],
+}
+
+/// A passage from one of the user's documents.
+#[derive(Debug, Clone)]
+pub struct Snippet {
+    pub title: String,
+    pub text: String,
 }
 
 impl Brief<'_> {
@@ -228,6 +237,16 @@ impl Brief<'_> {
                 focus.name.trim(),
                 focus.instructions.trim()
             );
+        }
+        if !self.context.is_empty() {
+            head.push_str(
+                "Context from the user's own documents. Use it to frame the analysis (goals, policies, \
+                 definitions). A figure taken from it must name its document, e.g. \"according to metas-2026\"; \
+                 every other figure must come from the data results.\n",
+            );
+            for s in self.context {
+                let _ = writeln!(head, "[{}] {}", s.title, s.text.trim());
+            }
         }
         head
     }
