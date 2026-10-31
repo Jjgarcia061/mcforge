@@ -8,6 +8,7 @@ import {
   errorMessage,
   unwrap,
   type NumberFormat,
+  type ReportEntry,
   type ReportOutcome,
   type ReportStage,
   type ReportWarning,
@@ -17,6 +18,7 @@ import {
 import { useAppData } from "../../lib/data";
 import { modelName } from "../../lib/engine";
 import { useSession } from "../../lib/session";
+import { RecentReports } from "./RecentReports";
 
 const STAGES: ReportStage[] = ["reading", "planning", "querying", "writing", "rendering"];
 const AI_STAGES: ReportStage[] = ["planning", "writing"];
@@ -48,6 +50,7 @@ export function ReportsView() {
   const [question, setQuestion] = useState("");
   const [useAi, setUseAi] = useState(true);
   const [run, setRun] = useState<Run | null>(null);
+  const [history, setHistory] = useState<ReportEntry[]>([]);
 
   const ai = useAi && engine !== undefined;
   const busy = run !== null && "stage" in run;
@@ -58,6 +61,10 @@ export function ReportsView() {
   useEffect(() => {
     if (runKind) progress.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [runKind]);
+
+  useEffect(() => {
+    void commands.listReports().then(setHistory);
+  }, []);
 
   useEffect(() => {
     let live = true;
@@ -121,6 +128,7 @@ export function ReportsView() {
       finished = true;
       setRun({ outcome });
       void openReport(outcome.path, false);
+      void commands.listReports().then(setHistory);
     } catch (e) {
       finished = true;
       setRun({ error: errorMessage(e) });
@@ -232,6 +240,8 @@ export function ReportsView() {
           <Result outcome={run.outcome} onOpen={(reveal) => void openReport(run.outcome.path, reveal)} />
         )}
       </div>
+
+      <RecentReports reports={history} onOpen={(path, reveal) => void openReport(path, reveal)} />
     </div>
   );
 }

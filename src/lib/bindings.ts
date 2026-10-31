@@ -21,7 +21,9 @@ export const commands = {
 	/**  Imports a CSV file or a workbook sheet (or reuses its cached import) and describes its columns. */
 	inspectSource: (path: string, sheet: string | null) => typedError<SourceSummary, AppError>(__TAURI_INVOKE("inspect_source", { path, sheet })),
 	generateReport: (request: ReportRequest_Deserialize, onStage: Channel<ReportStage>) => typedError<ReportOutcome_Serialize, AppError>(__TAURI_INVOKE("generate_report", { request, onStage })),
-	/**  Opens a report generated in this session, or shows it in its folder. */
+	/**  Reports generated on this computer whose files still exist, newest first. */
+	listReports: () => __TAURI_INVOKE<ReportEntry_Serialize[]>("list_reports"),
+	/**  Opens a report MCForge generated, or shows it in its folder. */
 	openReport: (path: string, reveal: boolean) => typedError<null, AppError>(__TAURI_INVOKE("open_report", { path, reveal })),
 };
 
@@ -232,6 +234,30 @@ export type Recommendation_Serialize = {
 	fit: Fit,
 	weakToolUse: boolean,
 	recommended: boolean,
+};
+
+export type ReportEntry = ReportEntry_Serialize | ReportEntry_Deserialize;
+
+export type ReportEntry_Deserialize = {
+	path: string,
+	title: string,
+	/**  The data it was made from: the file name, plus the sheet for workbooks. */
+	source: string,
+	/**  RFC 3339 in local time. */
+	created: string,
+	sections: number,
+	engine?: string | null,
+};
+
+export type ReportEntry_Serialize = {
+	path: string,
+	title: string,
+	/**  The data it was made from: the file name, plus the sheet for workbooks. */
+	source: string,
+	/**  RFC 3339 in local time. */
+	created: string,
+	sections: number,
+	engine: string | null,
 };
 
 export type ReportOutcome = ReportOutcome_Serialize | ReportOutcome_Deserialize;

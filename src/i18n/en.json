@@ -238,6 +238,13 @@
       "semicolon": "semicolon",
       "tab": "tab",
       "pipe": "pipe"
+    },
+    "recent": {
+      "title": "Earlier reports",
+      "open": "Open",
+      "reveal": "Folder",
+      "all": "Show all ({{count}})",
+      "fewer": "Show fewer"
     }
   }
 }

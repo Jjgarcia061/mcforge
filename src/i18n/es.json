@@ -238,6 +238,13 @@
       "semicolon": "punto y coma",
       "tab": "tabuladores",
       "pipe": "barras"
+    },
+    "recent": {
+      "title": "Reportes anteriores",
+      "open": "Abrir",
+      "reveal": "Carpeta",
+      "all": "Ver todos ({{count}})",
+      "fewer": "Ver menos"
     }
   }
 }

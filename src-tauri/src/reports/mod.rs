@@ -4,6 +4,7 @@
 
 pub mod analysis;
 pub mod chart;
+pub mod history;
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};

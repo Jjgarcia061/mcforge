@@ -22,6 +22,7 @@ export type {
   Provider,
   PullProgress_Deserialize as PullProgress,
   Recommendation_Serialize as Recommendation,
+  ReportEntry_Serialize as ReportEntry,
   ReportOutcome_Serialize as ReportOutcome,
   ReportRequest_Deserialize as ReportRequest,
   ReportStage,

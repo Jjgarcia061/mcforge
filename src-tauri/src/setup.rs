@@ -7,6 +7,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
+use crate::atomic;
 use crate::catalog::{Catalog, FieldKind, FieldValue, Values};
 use crate::error::{Error, Result};
 use crate::policy::Permission;
@@ -99,20 +100,13 @@ pub fn load(path: &Path, catalog: &Catalog) -> Result<Option<Setup>> {
     Ok(Some(setup))
 }
 
-/// Writes atomically, so a crash never leaves a half-written setup behind.
 pub fn save(path: &Path, setup: &Setup, catalog: &Catalog) -> Result<()> {
     let mut public = setup.clone();
     for (account, secret) in public.split_secrets(catalog)? {
         secrets::set(&account, &secret)?;
     }
     let json = serde_json::to_vec_pretty(&public).map_err(|e| Error::Io(e.to_string()))?;
-    if let Some(dir) = path.parent() {
-        std::fs::create_dir_all(dir)?;
-    }
-    let partial = path.with_extension("partial");
-    std::fs::write(&partial, json)?;
-    std::fs::rename(partial, path)?;
-    Ok(())
+    atomic::write(path, &json)
 }
 
 #[cfg(test)]
