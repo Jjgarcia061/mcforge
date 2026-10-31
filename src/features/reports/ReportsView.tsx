@@ -24,7 +24,7 @@ const SHOWN_COLUMNS = 14;
 const DELIMITERS: Record<string, string> = { ",": "comma", ";": "semicolon", tab: "tab", "|": "pipe" };
 
 /** The separators this system writes numbers with, so the report reads naturally. */
-export function numberFormat(locale?: string): NumberFormat {
+function numberFormat(locale?: string): NumberFormat {
   const parts = new Intl.NumberFormat(locale).formatToParts(1234567.5);
   return {
     decimal: parts.find((p) => p.type === "decimal")?.value ?? ".",
