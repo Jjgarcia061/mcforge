@@ -36,7 +36,8 @@
       "icons/icon.ico"
     ],
     "resources": {
-      "../catalog/": "catalog/"
+      "../catalog/": "catalog/",
+      "../templates/": "templates/"
     }
   }
 }

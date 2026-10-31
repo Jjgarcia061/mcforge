@@ -5,7 +5,8 @@
   "nav": {
     "back": "Atrás",
     "next": "Continuar",
-    "stepOf": "Paso {{n}} de {{total}}"
+    "stepOf": "Paso {{n}} de {{total}}",
+    "cancel": "Cancelar"
   },
   "steps": {
     "system": {
@@ -86,12 +87,14 @@
     "connecting": "Comprobando…",
     "keySaved": "Conectado con la clave de tu llavero",
     "replaceKey": "Usar otra clave",
-    "model": "Modelo"
+    "model": "Modelo",
+    "otherInstalled": "Otros modelos descargados",
+    "otherInstalledHint": "Están en tu equipo pero no en el catálogo de MCForge, así que no sabemos qué tan bien usan las herramientas."
   },
   "useCases": {
     "reports": {
       "title": "Reportes",
-      "description": "Genera reportes PDF, Excel o Word a partir de tus datos y plantillas."
+      "description": "Convierte archivos CSV y bases de datos en reportes con gráficas y conclusiones."
     },
     "files": {
       "title": "Archivos",
@@ -166,9 +169,71 @@
     "connections": "Conexiones",
     "rules": "{{allow}} permitidas · {{ask}} preguntan antes · {{deny}} bloqueadas",
     "start": "Empezar",
-    "comingSoon": "Guardar la configuración y el chat llegan en la próxima versión."
+    "saved": "Tu configuración se guarda en este equipo. Las claves y contraseñas van al llavero del sistema.",
+    "saving": "Guardando…"
   },
   "error": {
     "title": "Algo salió mal"
+  },
+  "workspace": {
+    "reports": "Reportes",
+    "chat": "Chat",
+    "soon": "Pronto",
+    "engine": "Motor de IA",
+    "editSetup": "Cambiar configuración"
+  },
+  "reports": {
+    "title": "Reportes",
+    "subtitle": "Convierte un archivo CSV en un reporte con cifras, gráficas y conclusiones.",
+    "data": "Datos",
+    "dataHint": "Elige un archivo CSV. Se copia a una base local de solo lectura; el original no se modifica.",
+    "chooseFile": "Elegir archivo CSV…",
+    "changeFile": "Cambiar archivo",
+    "reading": "Leyendo el archivo…",
+    "fileInfo": "{{rows}} filas · {{columns}} columnas · separado por {{delimiter}} · {{encoding}}",
+    "moreColumns": "+{{count}} más",
+    "kind": {
+      "integer": "entero",
+      "decimal": "decimal",
+      "date": "fecha",
+      "text": "texto"
+    },
+    "template": "Plantilla",
+    "usingTemplate": "Plantilla: {{name}}",
+    "question": "¿Qué quieres saber?",
+    "optional": "Opcional",
+    "questionPlaceholder": "Ej.: ¿qué productos y regiones venden más? ¿Cómo cambian las ventas cada mes?",
+    "useAi": "Usar {{model}} para elegir los análisis y escribir las conclusiones",
+    "localHint": "Con un modelo local tarda de 20 segundos a un par de minutos, según tu equipo.",
+    "noEngine": "Sin un motor de IA el reporte se arma con reglas automáticas y no lleva conclusiones escritas.",
+    "generate": "Generar reporte",
+    "generating": "Generando…",
+    "stage": {
+      "reading": "Leyendo los datos",
+      "planning": "La IA está planeando los análisis",
+      "querying": "Consultando los datos (solo lectura)",
+      "writing": "La IA está escribiendo las conclusiones",
+      "rendering": "Armando el reporte"
+    },
+    "done": "Listo: {{title}}",
+    "sections_one": "{{count}} sección",
+    "sections_other": "{{count}} secciones",
+    "by": "conclusiones de {{engine}}",
+    "auto": "secciones automáticas",
+    "open": "Abrir reporte",
+    "reveal": "Mostrar en la carpeta",
+    "failed": "No se pudo generar el reporte",
+    "warning": {
+      "planFailed": "La IA no pudo planear el reporte, así que se usaron reglas automáticas. Detalle: {{detail}}",
+      "queriesDropped_one": "Se descartó {{count}} consulta de la IA que no funcionó.",
+      "queriesDropped_other": "Se descartaron {{count}} consultas de la IA que no funcionaron.",
+      "narrativeFailed": "La IA no pudo escribir las conclusiones. Detalle: {{detail}}"
+    },
+    "delimiter": {
+      "comma": "comas",
+      "semicolon": "punto y coma",
+      "tab": "tabuladores",
+      "pipe": "barras"
+    }
   }
 }

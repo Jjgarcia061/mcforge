@@ -6,7 +6,7 @@ Thanks for helping! Contributions of every size are welcome.
 
 - **Add a connector**: one TOML file in `catalog/connectors/`. See [docs/adding-a-connector.md](docs/adding-a-connector.md).
 - **Add or tune a model** in `catalog/models.toml` (sizes, memory requirements, tool-calling quality).
-- **Add a report template** in `templates/reports/`.
+- **Add a report template** in `templates/reports/`. See [docs/report-templates.md](docs/report-templates.md).
 - **Translate** the UI: `src/i18n/<lang>.json`.
 - **Fix bugs / build features**: look for issues labelled `good first issue`.
 

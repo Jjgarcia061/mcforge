@@ -8,9 +8,9 @@ MCForge is an open-source desktop app (Windows, macOS, Linux) that walks you thr
 2. **Pick your engine**: a local model (via [Ollama](https://ollama.com)) or an API (Anthropic, OpenAI).
 3. **Pick what you need**: files, databases, web, Git, reports… from a growing catalog.
 4. **Decide what the AI may do**: every tool is allowed, asks first, or is blocked. MCForge enforces it — not the prompt.
-5. **Generate reports from templates**: the AI gathers and structures the data, MCForge renders the PDF / Excel / Word document deterministically.
+5. **Generate reports**: pick a CSV file and ask a question. The AI plans the analysis as read-only SQL and writes the conclusions; MCForge runs the queries, draws the charts and renders the document from a template, so every figure comes straight from the data.
 
-> Status: early development (v0.1). Not ready for daily use yet.
+> Status: early development (v0.1). The setup wizard and CSV reports work; chat, the MCP host and PDF / Excel / Word output are next.
 
 ## Why
 
@@ -34,6 +34,13 @@ Checks:
 ```bash
 npm run check   # typecheck + lint + UI tests
 cargo test --manifest-path src-tauri/Cargo.toml
+```
+
+To tune the report prompts against a real local model:
+
+```bash
+MCFORGE_TEST_OLLAMA_MODEL=qwen3:8b MCFORGE_TEST_CSV=path/to/file.csv \
+  cargo test --manifest-path src-tauri/Cargo.toml real_local_model -- --ignored --nocapture
 ```
 
 The `lab/` folder is git-ignored: use it for experiments and local secrets, then move what works into the project with a test.

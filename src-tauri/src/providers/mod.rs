@@ -1,11 +1,14 @@
-//! Model providers. F0 covers key validation and model discovery; chat
-//! streaming and tool calling build on the same `Provider` type in F1.
+//! Model providers: key validation, model discovery and structured answers.
+//! Chat streaming and tool calling build on the same `Provider` type in F1.
 
+pub mod chat;
 pub mod ollama;
 
 use serde::{Deserialize, Serialize};
 
 use crate::error::{Error, Result};
+
+pub(crate) const ANTHROPIC_VERSION: &str = "2023-06-01";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
@@ -28,7 +31,7 @@ impl Provider {
             Self::Anthropic => http
                 .get("https://api.anthropic.com/v1/models?limit=1000")
                 .header("x-api-key", key)
-                .header("anthropic-version", "2023-06-01"),
+                .header("anthropic-version", ANTHROPIC_VERSION),
             Self::Openai => http
                 .get("https://api.openai.com/v1/models")
                 .bearer_auth(key),

@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{Error, Result};
 
-const BASE: &str = "http://127.0.0.1:11434";
+pub(crate) const BASE: &str = "http://127.0.0.1:11434";
 
 #[derive(Debug, Clone, Serialize, specta::Type)]
 #[serde(tag = "state", rename_all = "camelCase")]

@@ -2,7 +2,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge, Button, Card, Input, Label, Notice, Select } from "../../../components/ui";
-import { commands, unwrap, type Connector, type Field, type FieldValue, type TestReport } from "../../../lib/api";
+import { commands, errorMessage, unwrap, type Connector, type Field, type FieldValue, type TestReport } from "../../../lib/api";
 import { useAppData } from "../../../lib/data";
 import { missingFields, selectedConnectors, useWizard } from "../store";
 
@@ -67,7 +67,7 @@ function ConnectionTest({
     try {
       setResult({ ok: await unwrap(commands.testConnection(connector.id, values)) });
     } catch (e) {
-      setResult({ error: e instanceof Error ? e.message : String(e) });
+      setResult({ error: errorMessage(e) });
     } finally {
       setBusy(false);
     }
@@ -138,7 +138,7 @@ function FieldInput({
   if (field.kind === "path") {
     return (
       <div className="flex gap-2">
-        <Input readOnly value={text} className="font-mono text-xs" />
+        <Input readOnly value={text} placeholder={field.placeholder ?? undefined} className="font-mono text-xs" />
         <Button
           variant="secondary"
           className="shrink-0"

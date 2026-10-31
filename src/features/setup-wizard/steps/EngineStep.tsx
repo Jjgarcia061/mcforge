@@ -5,6 +5,7 @@ import { Badge, Button, Card, Input, Label, Notice, Progress, Segmented, Select 
 import {
   Channel,
   commands,
+  errorMessage,
   gb,
   unwrap,
   type Catalog,
@@ -21,8 +22,6 @@ const FIT_TONE: Record<Fit, "good" | "warn" | "bad"> = { smooth: "good", usable:
 const PROVIDERS: Provider[] = ["anthropic", "openai"];
 // OpenAI lists every model; keep the ones that can chat and call tools.
 const OPENAI_NON_CHAT = /audio|realtime|tts|transcribe|image|search|embedding|moderation|dall-e|whisper|babbage|davinci/;
-
-const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 export function EngineStep() {
   const { t } = useTranslation();
@@ -58,7 +57,7 @@ function LocalModels() {
     () =>
       unwrap(commands.ollamaStatus()).then(
         (s) => setStatus(s),
-        (e) => setError(message(e)),
+        (e) => setError(errorMessage(e)),
       ),
     [],
   );
@@ -74,13 +73,14 @@ function LocalModels() {
       await unwrap(commands.pullModel(model, channel));
       await refresh();
     } catch (e) {
-      setError(message(e));
+      setError(errorMessage(e));
     } finally {
       setPulling(null);
     }
   }
 
   const installed = status?.state === "running" ? status.models : [];
+  const others = installed.filter((m) => !recommendations.some((r) => r.model.id === m));
 
   return (
     <div className="space-y-4">
@@ -99,7 +99,38 @@ function LocalModels() {
         ))}
       </div>
       <p className="text-xs text-zinc-500">{t("engine.weakTools")}</p>
+      {others.length > 0 && (
+        <div className="space-y-2 pt-2">
+          <div>
+            <div className="text-sm font-medium">{t("engine.otherInstalled")}</div>
+            <p className="text-xs text-zinc-500">{t("engine.otherInstalledHint")}</p>
+          </div>
+          {others.map((m) => (
+            <InstalledModel key={m} model={m} />
+          ))}
+        </div>
+      )}
     </div>
+  );
+}
+
+/** A model already in Ollama that the catalog does not know, so it has no fit or tool rating. */
+function InstalledModel({ model }: { model: string }) {
+  const { t } = useTranslation();
+  const { engine, setEngine } = useWizard();
+  const selected = engine?.kind === "local" && engine.model === model;
+  return (
+    <Card selected={selected}>
+      <div className="flex items-center justify-between gap-4">
+        <span className="truncate font-mono text-sm">{model}</span>
+        <div className="flex shrink-0 gap-2">
+          <Badge tone="good">{t("engine.installed")}</Badge>
+          <Button variant={selected ? "primary" : "secondary"} onClick={() => setEngine({ kind: "local", model })}>
+            {t(selected ? "engine.selected" : "engine.use")}
+          </Button>
+        </div>
+      </div>
+    </Card>
   );
 }
 
@@ -262,7 +293,7 @@ function ProviderPanel({ provider }: { provider: Provider }) {
       setKey("");
       setReplacing(false);
     } catch (e) {
-      setError(message(e));
+      setError(errorMessage(e));
     } finally {
       setBusy(false);
     }

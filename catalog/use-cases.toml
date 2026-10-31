@@ -1,9 +1,10 @@
 # Wizard step 3: each use case preselects a set of connectors.
 # Titles and descriptions live in src/i18n/<lang>.json under "useCases.<id>".
 
+# CSV files are read by the reports screen itself; databases and folders are optional extras.
 [[use_cases]]
 id = "reports"
-connectors = ["reports", "database", "filesystem"]
+connectors = ["reports"]
 
 [[use_cases]]
 id = "files"

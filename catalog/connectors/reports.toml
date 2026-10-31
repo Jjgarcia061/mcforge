@@ -18,7 +18,8 @@ required = false
 key = "output_dir"
 label = "Save reports to"
 kind = "path"
-required = true
+required = false
+placeholder = "Documents/MCForge"
 
 [[tools]]
 name = "list_templates"

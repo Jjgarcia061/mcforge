@@ -7,8 +7,11 @@ React UI (src/)  ──  typed IPC (src/lib/bindings.ts, generated)  ──  Rus
                                                                        ├─ catalog    TOML manifests → validated data
                                                                        ├─ hardware   RAM / CPU / GPU detection
                                                                        ├─ recommend  hardware × models → ranking
-                                                                       ├─ providers  Anthropic, OpenAI, Ollama
+                                                                       ├─ providers  Anthropic, OpenAI, Ollama (keys, models, JSON answers)
                                                                        ├─ database   built-in PostgreSQL / MySQL / SQLite connector
+                                                                       ├─ sources    CSV files → cached read-only SQLite tables
+                                                                       ├─ reports    plan → query → explain → render (MiniJinja + SVG charts)
+                                                                       ├─ setup      saved setup (JSON) with secrets in the keychain
                                                                        ├─ policy     allow / ask / deny gate
                                                                        ├─ secrets    OS keychain
                                                                        └─ commands   the only IPC surface
@@ -30,6 +33,11 @@ React UI (src/)  ──  typed IPC (src/lib/bindings.ts, generated)  ──  Rus
 4. `connect_provider` validates an API key by listing models, then stores it in the keychain. `saved_provider_models` reuses a stored key.
 5. Use cases (`catalog/use-cases.toml`) preselect connectors; each connector's `fields` become a form and its `tools` become permission toggles.
 6. `test_connection` checks a connector's values before saving. Today the built-in database connector supports it.
+7. `save_setup` writes the setup to the app's config folder; `secret` field values go to the keychain instead. `load_setup` fills them back in, and the app opens on the workspace from then on.
+
+## Reports
+
+`inspect_csv` imports a file (or reuses its cached import) and describes its columns. `generate_report` streams its stages over a Tauri channel while it plans, queries, explains and renders; see [report-templates.md](report-templates.md). The AI's SQL runs through the same read-only `Database` as the database connector, so a model that writes `DELETE` gets an error, not a deletion. `open_report` only opens files generated in the current session.
 
 ## Database connector
 
@@ -44,8 +52,8 @@ For extra safety, connect with a database user that only has the privileges you 
 
 | Phase | Scope |
 |---|---|
-| F0 | Structure, catalog, hardware & recommendation, setup wizard |
+| F0 | Structure, catalog, hardware & recommendation, setup wizard, saved setup, CSV reports (HTML) |
 | F1 | Chat with streaming and tool calling (Anthropic, OpenAI, Ollama) |
 | F2 | MCP host: launch servers, enforce policy, audit log, activity view; persist setup |
-| F3 | Report engine (PDF via Typst, XLSX, DOCX, HTML) + example templates |
+| F3 | More report formats (PDF via Typst, XLSX, DOCX), database sources, more templates |
 | F4 | Larger catalog, export config to other MCP clients, signed installers |

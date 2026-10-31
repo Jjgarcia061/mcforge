@@ -1,0 +1,155 @@
+{#- Shared by the analysis tables and the data preview. -#}
+{%- macro data_table(tbl) %}
+<div class="scroll">
+  <table>
+    <thead><tr>{% for c in tbl.columns %}<th{% if tbl.numeric[loop.index0] %} class="num"{% endif %}>{{ c }}</th>{% endfor %}</tr></thead>
+    <tbody>
+    {% for row in tbl.rows %}
+      <tr>{% for v in row %}<td{% if tbl.numeric[loop.index0] %} class="num"{% endif %}>{{ v }}</td>{% endfor %}</tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% if tbl.more %}<div class="more">{{ t.more_rows | replace("{n}", tbl.more | string) }}</div>{% endif %}
+{% endmacro -%}
+<!doctype html>
+<html lang="{{ lang }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="MCForge">
+<title>{{ title }}</title>
+<style>
+  :root {
+    --ink: #18181b; --muted: #71717a; --line: #e4e4e7; --soft: #fafafa;
+    --accent: #ea580c; --accent-soft: #fff7ed;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: #f4f4f5; color: var(--ink);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  .page { max-width: 900px; margin: 32px auto; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgb(0 0 0 / 0.08); }
+  header { padding: 40px 48px 32px; border-bottom: 1px solid var(--line); }
+  .brand { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; font-size: 13px; color: var(--muted); }
+  .brand b { color: var(--ink); letter-spacing: -0.01em; }
+  .brand b span { color: var(--accent); }
+  h1 { margin: 0; font-size: 30px; line-height: 1.2; letter-spacing: -0.02em; }
+  .meta { margin-top: 10px; color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; gap: 4px 18px; }
+  .question { margin-top: 20px; padding: 12px 16px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 8px 8px 0; }
+  .question small { display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+  main { padding: 8px 48px 40px; }
+  section { padding-top: 32px; break-inside: avoid; }
+  h2 { margin: 0 0 14px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  h3 { margin: 0 0 6px; font-size: 18px; letter-spacing: -0.01em; }
+  .figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+  .figure { padding: 16px; border: 1px solid var(--line); border-radius: 12px; }
+  .figure div { font-size: 22px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .figure small { color: var(--muted); font-size: 13px; }
+  .summary p { margin: 0 0 12px; }
+  .highlights { margin: 16px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+  .highlights li { padding: 10px 14px 10px 36px; background: var(--soft); border-radius: 10px; position: relative; }
+  .highlights li::before { content: ""; position: absolute; left: 16px; top: 19px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+  .card { border: 1px solid var(--line); border-radius: 14px; padding: 22px 24px; margin-bottom: 16px; break-inside: avoid; }
+  .card p { margin: 0 0 14px; color: #3f3f46; }
+  .chart { display: block; margin-top: 8px; }
+  .note { color: var(--muted); font-size: 13px; margin: 0 0 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+  th { text-align: left; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--line); padding: 8px 10px; white-space: nowrap; }
+  td { border-bottom: 1px solid #f4f4f5; padding: 7px 10px; vertical-align: top; }
+  .num { text-align: right; }
+  .scroll { overflow-x: auto; }
+  .more { color: var(--muted); font-size: 12px; margin-top: 8px; }
+  footer { padding: 20px 48px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; background: var(--soft); }
+  .print { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+  .print:hover { border-color: var(--accent); color: var(--accent); }
+  @media (max-width: 640px) { header, main, footer { padding-left: 20px; padding-right: 20px; } .page { margin: 0; border-radius: 0; } }
+  @media print {
+    @page { size: A4; margin: 14mm; }
+    body { background: #fff; font-size: 12px; }
+    .page { margin: 0; max-width: none; box-shadow: none; border-radius: 0; }
+    header, main, footer { padding-left: 0; padding-right: 0; }
+    .print { display: none; }
+    .scroll { overflow: visible; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="brand">
+      <b>MC<span>Forge</span></b>
+      <button class="print" onclick="window.print()">{{ t.print }}</button>
+    </div>
+    <h1>{{ title }}</h1>
+    <div class="meta">
+      <span>{{ t.source }}: {{ file }}</span>
+      <span>{{ t.generated }}: {{ generated_at }}</span>
+      {% if engine %}<span>{{ t.engine }}: {{ engine }}</span>{% endif %}
+    </div>
+    {% if question %}
+    <div class="question"><small>{{ t.question }}</small>{{ question }}</div>
+    {% endif %}
+  </header>
+
+  <main>
+    <section>
+      <h2>{{ t.key_figures }}</h2>
+      <div class="figures">
+        {% for f in figures %}
+        <div class="figure"><small>{{ f.label }}</small><div>{{ f.value }}</div></div>
+        {% endfor %}
+      </div>
+    </section>
+
+    {% if summary or highlights %}
+    <section class="summary">
+      <h2>{{ t.summary }}</h2>
+      {% for p in summary %}<p>{{ p }}</p>{% endfor %}
+      {% if highlights %}
+      <ul class="highlights">
+        {% for h in highlights %}<li>{{ h }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    {% if sections %}
+    <section>
+      <h2>{{ t.analysis }}</h2>
+      {% if not engine %}<p class="note">{{ t.auto_note }}</p>{% endif %}
+      {% for s in sections %}
+      <div class="card">
+        <h3>{{ s.title }}</h3>
+        {% if s.commentary %}<p>{{ s.commentary }}</p>{% endif %}
+        {% if s.chart %}{{ s.chart | safe }}{% endif %}
+        {% if s.table %}{{ data_table(s.table) }}{% endif %}
+      </div>
+      {% endfor %}
+    </section>
+    {% endif %}
+
+    <section>
+      <h2>{{ t.data_columns }}</h2>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>{{ t.column }}</th><th>{{ t.type }}</th><th class="num">{{ t.filled }}</th><th class="num">{{ t.distinct }}</th><th>{{ t.values }}</th></tr></thead>
+          <tbody>
+          {% for c in columns %}
+            <tr><td>{{ c.label }}</td><td>{{ t[c.kind] }}</td><td class="num">{{ c.filled }}</td><td class="num">{{ c.distinct }}</td><td>{{ c.values }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2>{{ t.preview }}</h2>
+      {{ data_table(preview) }}
+    </section>
+  </main>
+
+  <footer>{{ t.footer }}</footer>
+</div>
+</body>
+</html>

@@ -23,6 +23,8 @@ pub enum Error {
     Database(String),
     #[error("{0}")]
     Io(String),
+    #[error("report error: {0}")]
+    Report(String),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -48,5 +50,12 @@ impl From<sqlx::Error> for Error {
 impl From<std::io::Error> for Error {
     fn from(e: std::io::Error) -> Self {
         Self::Io(e.to_string())
+    }
+}
+
+impl From<minijinja::Error> for Error {
+    fn from(e: minijinja::Error) -> Self {
+        // The alternate form includes the template line that failed.
+        Self::Report(format!("{e:#}"))
     }
 }

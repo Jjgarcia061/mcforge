@@ -1,10 +1,8 @@
 import { create } from "zustand";
-import type { Catalog, Connector, FieldValue, Permission, Provider } from "../../lib/api";
+import type { Catalog, Connector, Engine, FieldValue, Permission, Setup } from "../../lib/api";
 
 export const STEPS = ["system", "engine", "useCase", "connections", "permissions", "finish"] as const;
 export type Step = (typeof STEPS)[number];
-
-export type Engine = { kind: "local"; model: string } | { kind: "api"; provider: Provider; model: string };
 
 export interface WizardState {
   step: number;
@@ -50,6 +48,18 @@ export const useWizard = create<WizardState & WizardActions>()((set) => ({
       permissions: { ...s.permissions, [connector]: { ...s.permissions[connector], [tool]: permission } },
     })),
 }));
+
+/** The wizard's answers as a setup to save, once an engine is chosen. */
+export function toSetup(state: WizardState): Setup | null {
+  if (!state.engine) return null;
+  const { engine, useCase, connectors, values, permissions } = state;
+  return { engine, useCase, connectors, values, permissions };
+}
+
+/** Wizard answers prefilled from a saved setup, for changing it. */
+export function fromSetup(setup: Setup): WizardState {
+  return { ...initialState, ...setup, step: STEPS.indexOf("engine") };
+}
 
 /** Connectors a use case suggests (in its order) and the rest of the catalog. An empty use case suggests everything. */
 export function suggestedConnectors(catalog: Catalog, useCase: string | null) {

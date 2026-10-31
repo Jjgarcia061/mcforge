@@ -5,7 +5,8 @@
   "nav": {
     "back": "Back",
     "next": "Continue",
-    "stepOf": "Step {{n}} of {{total}}"
+    "stepOf": "Step {{n}} of {{total}}",
+    "cancel": "Cancel"
   },
   "steps": {
     "system": {
@@ -86,12 +87,14 @@
     "connecting": "Checking…",
     "keySaved": "Connected with the key in your keychain",
     "replaceKey": "Use a different key",
-    "model": "Model"
+    "model": "Model",
+    "otherInstalled": "Other downloaded models",
+    "otherInstalledHint": "They are on this computer but not in MCForge's catalog, so we can't say how well they use tools."
   },
   "useCases": {
     "reports": {
       "title": "Reports",
-      "description": "Build PDF, Excel or Word reports from your data and templates."
+      "description": "Turn CSV files and databases into reports with charts and conclusions."
     },
     "files": {
       "title": "Files",
@@ -166,9 +169,71 @@
     "connections": "Connections",
     "rules": "{{allow}} allowed · {{ask}} ask first · {{deny}} blocked",
     "start": "Start",
-    "comingSoon": "Saving the setup and the chat arrive in the next version."
+    "saved": "Your setup is saved on this computer. Keys and passwords go to the system keychain.",
+    "saving": "Saving…"
   },
   "error": {
     "title": "Something went wrong"
+  },
+  "workspace": {
+    "reports": "Reports",
+    "chat": "Chat",
+    "soon": "Soon",
+    "engine": "AI engine",
+    "editSetup": "Change setup"
+  },
+  "reports": {
+    "title": "Reports",
+    "subtitle": "Turn a CSV file into a report with figures, charts and conclusions.",
+    "data": "Data",
+    "dataHint": "Choose a CSV file. It is copied into a local read-only database; the original is never changed.",
+    "chooseFile": "Choose CSV file…",
+    "changeFile": "Change file",
+    "reading": "Reading the file…",
+    "fileInfo": "{{rows}} rows · {{columns}} columns · {{delimiter}} separated · {{encoding}}",
+    "moreColumns": "+{{count}} more",
+    "kind": {
+      "integer": "integer",
+      "decimal": "decimal",
+      "date": "date",
+      "text": "text"
+    },
+    "template": "Template",
+    "usingTemplate": "Template: {{name}}",
+    "question": "What do you want to know?",
+    "optional": "Optional",
+    "questionPlaceholder": "E.g. which products and regions sell the most? How do sales change month by month?",
+    "useAi": "Use {{model}} to choose the analyses and write the conclusions",
+    "localHint": "A local model takes from 20 seconds to a couple of minutes, depending on your computer.",
+    "noEngine": "Without an AI engine the report is built with automatic rules and has no written conclusions.",
+    "generate": "Generate report",
+    "generating": "Generating…",
+    "stage": {
+      "reading": "Reading the data",
+      "planning": "The AI is planning the analyses",
+      "querying": "Querying the data (read-only)",
+      "writing": "The AI is writing the conclusions",
+      "rendering": "Putting the report together"
+    },
+    "done": "Ready: {{title}}",
+    "sections_one": "{{count}} section",
+    "sections_other": "{{count}} sections",
+    "by": "conclusions by {{engine}}",
+    "auto": "automatic sections",
+    "open": "Open report",
+    "reveal": "Show in folder",
+    "failed": "The report could not be generated",
+    "warning": {
+      "planFailed": "The AI could not plan the report, so automatic rules were used. Details: {{detail}}",
+      "queriesDropped_one": "{{count}} query from the AI did not work and was left out.",
+      "queriesDropped_other": "{{count}} queries from the AI did not work and were left out.",
+      "narrativeFailed": "The AI could not write the conclusions. Details: {{detail}}"
+    },
+    "delimiter": {
+      "comma": "comma",
+      "semicolon": "semicolon",
+      "tab": "tab",
+      "pipe": "pipe"
+    }
   }
 }

@@ -14,6 +14,15 @@ export const commands = {
 	savedProviderModels: (provider: Provider) => typedError<string[] | null, AppError>(__TAURI_INVOKE("saved_provider_models", { provider })),
 	/**  Checks a connector's configuration before it is saved. */
 	testConnection: (connectorId: string, values: { [key in string]: FieldValue }) => typedError<TestReport, AppError>(__TAURI_INVOKE("test_connection", { connectorId, values })),
+	/**  The saved setup, or `None` on first run. */
+	loadSetup: () => __TAURI_INVOKE<Setup_Serialize | null>("load_setup"),
+	saveSetup: (setup: Setup_Deserialize) => typedError<null, AppError>(__TAURI_INVOKE("save_setup", { setup })),
+	listTemplates: (language: string) => __TAURI_INVOKE<TemplateInfo[]>("list_templates", { language }),
+	/**  Imports a CSV file (or reuses its cached import) and describes its columns. */
+	inspectCsv: (path: string) => typedError<SourceSummary, AppError>(__TAURI_INVOKE("inspect_csv", { path })),
+	generateReport: (request: ReportRequest_Deserialize, onStage: Channel<ReportStage>) => typedError<ReportOutcome_Serialize, AppError>(__TAURI_INVOKE("generate_report", { request, onStage })),
+	/**  Opens a report generated in this session, or shows it in its folder. */
+	openReport: (path: string, reveal: boolean) => typedError<null, AppError>(__TAURI_INVOKE("open_report", { path, reveal })),
 };
 
 /* Types */
@@ -41,7 +50,7 @@ export type ApiModel_Serialize = {
  *  receives a typed `{ kind, message }` object instead of an opaque string.
  *  Exported to TypeScript as `AppError` so it does not shadow the built-in `Error`.
  */
-export type AppError = { kind: "catalog"; message: string } | { kind: "network"; message: string } | { kind: "keychain"; message: string } | { kind: "provider"; message: string } | { kind: "database"; message: string } | { kind: "io"; message: string };
+export type AppError = { kind: "catalog"; message: string } | { kind: "network"; message: string } | { kind: "keychain"; message: string } | { kind: "provider"; message: string } | { kind: "database"; message: string } | { kind: "io"; message: string } | { kind: "report"; message: string };
 
 /**  Connectors implemented inside MCForge itself. */
 export type BuiltinModule = "database" | "reports";
@@ -61,6 +70,8 @@ export type Catalog_Serialize = {
 };
 
 export type Category = "files" | "data" | "reports" | "web" | "development" | "apps";
+
+export type ColumnKind = "integer" | "decimal" | "date" | "text";
 
 export type Connector = Connector_Serialize | Connector_Deserialize;
 
@@ -91,6 +102,8 @@ export type Connector_Serialize = {
 	/**  Whether the wizard can check this configuration before saving. Derived at load time. */
 	testable: boolean,
 };
+
+export type Engine = { kind: "local"; model: string } | { kind: "api"; provider: Provider; model: string };
 
 export type Field = Field_Serialize | Field_Deserialize;
 
@@ -159,6 +172,12 @@ export type Models_Serialize = {
 	api: ApiModel_Serialize[],
 };
 
+/**  How the user's system writes numbers, e.g. `1,234.5` or `1.234,5`. */
+export type NumberFormat = {
+	decimal: string,
+	group: string,
+};
+
 export type OllamaStatus = { state: "notInstalled" } | { state: "stopped" } | { state: "running"; version: string; models: string[] };
 
 export type Package = Package_Serialize | Package_Deserialize;
@@ -215,6 +234,53 @@ export type Recommendation_Serialize = {
 	recommended: boolean,
 };
 
+export type ReportOutcome = ReportOutcome_Serialize | ReportOutcome_Deserialize;
+
+export type ReportOutcome_Deserialize = {
+	path: string,
+	title: string,
+	sections: number,
+	/**  The model that wrote the plan or the conclusions, if one did. */
+	engine?: string | null,
+	warnings: ReportWarning[],
+};
+
+export type ReportOutcome_Serialize = {
+	path: string,
+	title: string,
+	sections: number,
+	/**  The model that wrote the plan or the conclusions, if one did. */
+	engine: string | null,
+	warnings: ReportWarning[],
+};
+
+export type ReportRequest = ReportRequest_Serialize | ReportRequest_Deserialize;
+
+export type ReportRequest_Deserialize = {
+	/**  The CSV file to report on. */
+	file: string,
+	template: string,
+	question?: string | null,
+	useAi: boolean,
+	language: string,
+	numberFormat: NumberFormat,
+};
+
+export type ReportRequest_Serialize = {
+	/**  The CSV file to report on. */
+	file: string,
+	template: string,
+	question: string | null,
+	useAi: boolean,
+	language: string,
+	numberFormat: NumberFormat,
+};
+
+export type ReportStage = "reading" | "planning" | "querying" | "writing" | "rendering";
+
+/**  Something that went wrong without stopping the report. The UI explains each kind. */
+export type ReportWarning = { kind: "planFailed"; detail: string } | { kind: "queriesDropped"; detail: number } | { kind: "narrativeFailed"; detail: string };
+
 export type Risk = "read" | "write" | "destructive" | "network" | "send";
 
 /**  How the MCP server is started. `{{field}}` placeholders are filled from user input. */
@@ -234,6 +300,41 @@ export type Server_Serialize = {
 	runtime: "uvx",
 } & Package_Serialize | ({ runtime: "binary"; command: string; args: string[]; env: { [key in string]: string } }) & { headers?: never; module?: never; url?: never } | ({ runtime: "http"; url: string; headers: { [key in string]: string } }) & { args?: never; command?: never; env?: never; module?: never } | ({ runtime: "builtin"; module: BuiltinModule }) & { args?: never; command?: never; env?: never; headers?: never; url?: never };
 
+export type Setup = Setup_Serialize | Setup_Deserialize;
+
+export type Setup_Deserialize = {
+	engine: Engine,
+	useCase?: string | null,
+	connectors: string[],
+	values?: { [key in string]: { [key in string]: FieldValue } },
+	permissions?: { [key in string]: { [key in string]: Permission } },
+};
+
+export type Setup_Serialize = {
+	engine: Engine,
+	useCase: string | null,
+	connectors: string[],
+	values: { [key in string]: { [key in string]: FieldValue } },
+	permissions: { [key in string]: { [key in string]: Permission } },
+};
+
+export type SourceColumn = {
+	/**  SQL identifier: lowercase ASCII snake_case, safe to write unquoted. */
+	name: string,
+	/**  The header as written in the file. */
+	label: string,
+	kind: ColumnKind,
+};
+
+export type SourceSummary = {
+	file: string,
+	table: string,
+	rows: number,
+	columns: SourceColumn[],
+	delimiter: string,
+	encoding: string,
+};
+
 export type SystemReport = SystemReport_Serialize | SystemReport_Deserialize;
 
 export type SystemReport_Deserialize = {
@@ -244,6 +345,12 @@ export type SystemReport_Deserialize = {
 export type SystemReport_Serialize = {
 	hardware: Hardware,
 	recommendations: Recommendation_Serialize[],
+};
+
+export type TemplateInfo = {
+	id: string,
+	name: string,
+	description: string,
 };
 
 /**  Outcome of a successful connection test, e.g. `PostgreSQL 17.6` and its tables. */

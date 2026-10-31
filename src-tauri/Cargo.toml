@@ -28,7 +28,11 @@ reqwest = { version = "0.13", features = ["json", "stream"] }
 futures-util = "0.3"
 keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust"] }
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "tls-rustls-ring-webpki", "postgres", "mysql", "mysql-rsa", "sqlite", "chrono", "json", "rust_decimal", "uuid"] }
-tokio = { version = "1", features = ["time"] }
+tokio = { version = "1", features = ["rt", "time"] }
+csv = { version = "1.4.0", default-features = false }
+encoding_rs = { version = "0.8.44", default-features = false }
+minijinja = { version = "3.0.5", default-features = false, features = ["builtins", "macros", "serde", "std_collections"] }
+chrono = { version = "0.4.45", default-features = false, features = ["clock", "std"] }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

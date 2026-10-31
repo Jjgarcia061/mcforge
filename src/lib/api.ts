@@ -9,18 +9,29 @@ export type {
   ApiModel_Serialize as ApiModel,
   Catalog_Serialize as Catalog,
   Category,
+  ColumnKind,
   Connector_Serialize as Connector,
+  Engine,
   Field_Serialize as Field,
   FieldValue,
   Fit,
   Hardware,
+  NumberFormat,
   OllamaStatus,
   Permission,
   Provider,
   PullProgress_Deserialize as PullProgress,
   Recommendation_Serialize as Recommendation,
+  ReportOutcome_Serialize as ReportOutcome,
+  ReportRequest_Deserialize as ReportRequest,
+  ReportStage,
+  ReportWarning,
   Risk,
+  Setup_Serialize as Setup,
+  SourceColumn,
+  SourceSummary,
   SystemReport_Serialize as SystemReport,
+  TemplateInfo,
   TestReport,
   Tool_Serialize as Tool,
   UseCase,
@@ -42,3 +53,5 @@ export async function unwrap<T>(result: Promise<CommandResult<T>>): Promise<T> {
 
 // The core sends f64 values, which the bindings type as `number | null`.
 export const gb = (n: number | null) => `${(n ?? 0).toFixed(1)} GB`;
+
+export const errorMessage = (e: unknown) => (e instanceof Error ? e.message : String(e));

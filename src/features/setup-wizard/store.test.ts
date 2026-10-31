@@ -1,6 +1,16 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Catalog, Connector } from "../../lib/api";
-import { canContinue, initialState, missingFields, permissionOf, STEPS, suggestedConnectors, useWizard } from "./store";
+import {
+  canContinue,
+  fromSetup,
+  initialState,
+  missingFields,
+  permissionOf,
+  STEPS,
+  suggestedConnectors,
+  toSetup,
+  useWizard,
+} from "./store";
 
 const files: Connector = {
   id: "filesystem",
@@ -83,5 +93,23 @@ describe("setup wizard", () => {
     expect(state().step).toBe(STEPS.length - 1);
     state().goTo(-1);
     expect(state().step).toBe(0);
+  });
+
+  it("round-trips the answers through a saved setup", () => {
+    expect(toSetup(state())).toBeNull();
+    state().setEngine({ kind: "local", model: "qwen3:8b" });
+    state().chooseUseCase(catalog, "files");
+    state().setValue("filesystem", "folders", ["/data"]);
+    const setup = toSetup(state());
+    expect(setup).toEqual({
+      engine: { kind: "local", model: "qwen3:8b" },
+      useCase: "files",
+      connectors: ["filesystem"],
+      values: { filesystem: { folders: ["/data"] } },
+      permissions: {},
+    });
+    const restored = fromSetup(setup!);
+    expect(restored.step).toBe(STEPS.indexOf("engine"));
+    expect(toSetup(restored)).toEqual(setup);
   });
 });

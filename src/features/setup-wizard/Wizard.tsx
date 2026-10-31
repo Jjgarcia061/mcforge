@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui";
 import { useAppData } from "../../lib/data";
+import { useSession } from "../../lib/session";
 import { canContinue, STEPS, useWizard, type Step } from "./store";
 import { ConnectionsStep } from "./steps/ConnectionsStep";
 import { EngineStep } from "./steps/EngineStep";
@@ -26,6 +27,7 @@ export function Wizard() {
   const step = STEPS[state.step] ?? "system";
   const View = VIEWS[step];
   const last = state.step === STEPS.length - 1;
+  const editing = useSession((s) => s.setup !== null);
 
   return (
     <div className="flex h-screen">
@@ -61,6 +63,11 @@ export function Wizard() {
             </li>
           ))}
         </ol>
+        {editing && (
+          <Button variant="ghost" className="mt-auto" onClick={() => useSession.setState({ editing: false })}>
+            {t("nav.cancel")}
+          </Button>
+        )}
       </aside>
 
       <main className="flex min-w-0 flex-1 flex-col">
