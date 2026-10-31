@@ -1,0 +1,174 @@
+{
+  "app": {
+    "tagline": "Your AI, your tools, your rules"
+  },
+  "nav": {
+    "back": "Back",
+    "next": "Continue",
+    "stepOf": "Step {{n}} of {{total}}"
+  },
+  "steps": {
+    "system": {
+      "title": "Your computer",
+      "subtitle": "We check what your machine can run so we recommend something that actually works."
+    },
+    "engine": {
+      "title": "AI engine",
+      "subtitle": "Run a model on this computer, or connect a provider's API."
+    },
+    "useCase": {
+      "title": "What do you need?",
+      "subtitle": "Pick a goal; we preselect the right connections. You can adjust them."
+    },
+    "connections": {
+      "title": "Connections",
+      "subtitle": "Tell each connection where to work."
+    },
+    "permissions": {
+      "title": "Permissions",
+      "subtitle": "Decide what the AI may do on its own, what needs your OK, and what is off-limits."
+    },
+    "finish": {
+      "title": "Ready",
+      "subtitle": "Review your setup."
+    }
+  },
+  "system": {
+    "os": "System",
+    "cpu": "Processor",
+    "cores": "{{count}} cores",
+    "memory": "Memory",
+    "accelerator": "Acceleration",
+    "appleSilicon": "Apple Silicon · unified memory",
+    "nvidia": "{{name}} · {{vram}}",
+    "none": "No supported GPU · runs on CPU",
+    "recommended": "Best local model for you: {{model}}",
+    "recommendedHint": "It runs smoothly here and handles tools reliably.",
+    "noneFits": "Local models would be slow on this computer",
+    "noneFitsHint": "An API (Anthropic or OpenAI) will give you a much better experience."
+  },
+  "engine": {
+    "local": "On this computer",
+    "api": "Provider API",
+    "fit": {
+      "smooth": "Smooth",
+      "usable": "Slow",
+      "tooBig": "Won't fit"
+    },
+    "tools": {
+      "poor": "Poor tool use",
+      "fair": "Fair tool use",
+      "good": "Good tool use",
+      "great": "Great tool use"
+    },
+    "recommended": "Recommended",
+    "memoryNeeded": "Needs ~{{gb}}",
+    "weakTools": "Small models often fail when calling tools.",
+    "use": "Use this",
+    "selected": "Selected",
+    "installed": "Downloaded",
+    "download": "Download",
+    "ollama": {
+      "checking": "Checking Ollama…",
+      "notInstalled": "Local models run through Ollama, a free app. Install it, then check again.",
+      "install": "Get Ollama",
+      "stopped": "Ollama is installed but not running. Open it, then check again.",
+      "retry": "Check again",
+      "running": "Ollama {{version}} is running"
+    },
+    "provider": {
+      "anthropic": "Anthropic (Claude)",
+      "openai": "OpenAI"
+    },
+    "apiKey": "API key",
+    "keyHint": "Checked with the provider, then stored in your system keychain. It never touches disk.",
+    "connect": "Connect",
+    "connecting": "Checking…",
+    "keySaved": "Connected with the key in your keychain",
+    "replaceKey": "Use a different key",
+    "model": "Model"
+  },
+  "useCases": {
+    "reports": {
+      "title": "Reports",
+      "description": "Build PDF, Excel or Word reports from your data and templates."
+    },
+    "files": {
+      "title": "Files",
+      "description": "Search, read and organise documents in chosen folders."
+    },
+    "data": {
+      "title": "Data & databases",
+      "description": "Ask questions about your databases in plain language."
+    },
+    "research": {
+      "title": "Research",
+      "description": "Read web pages and save findings."
+    },
+    "development": {
+      "title": "Development",
+      "description": "Work with Git repositories and GitHub."
+    },
+    "custom": {
+      "title": "Custom",
+      "description": "Start empty and pick connections yourself."
+    }
+  },
+  "useCase": {
+    "suggested": "Suggested for {{useCase}}",
+    "more_one": "{{count}} more connection",
+    "more_other": "{{count}} more connections",
+    "extrasChosen_one": "{{count}} added",
+    "extrasChosen_other": "{{count}} added"
+  },
+  "categories": {
+    "files": "Files",
+    "data": "Data",
+    "reports": "Reports",
+    "web": "Web",
+    "development": "Development",
+    "apps": "Apps"
+  },
+  "connector": {
+    "builtin": "Built into MCForge",
+    "external": "Third-party code",
+    "unverified": "Not reviewed yet"
+  },
+  "connections": {
+    "nothingToConfigure": "The selected connections need no setup.",
+    "chooseFolder": "Choose folder…",
+    "addFolder": "Add folder…",
+    "remove": "Remove",
+    "required": "Required",
+    "select": "Select…",
+    "test": "Test connection",
+    "testing": "Testing…",
+    "testOk_one": "{{title}} · {{count}} table",
+    "testOk_other": "{{title}} · {{count}} tables"
+  },
+  "permissions": {
+    "intro": "MCForge enforces these rules on every call. The AI cannot override them.",
+    "allow": "Allow",
+    "ask": "Ask me",
+    "deny": "Block",
+    "risk": {
+      "read": "Reads",
+      "write": "Changes",
+      "destructive": "Destructive",
+      "network": "Internet",
+      "send": "Sends for you"
+    }
+  },
+  "finish": {
+    "engine": "Engine",
+    "local": "Local · {{model}}",
+    "api": "{{provider}} · {{model}}",
+    "connections": "Connections",
+    "rules": "{{allow}} allowed · {{ask}} ask first · {{deny}} blocked",
+    "start": "Start",
+    "comingSoon": "Saving the setup and the chat arrive in the next version."
+  },
+  "error": {
+    "title": "Something went wrong"
+  }
+}

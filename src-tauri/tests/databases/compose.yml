@@ -1,0 +1,32 @@
+# Local PostgreSQL and MySQL servers preloaded with sales.sql, for development and tests.
+#   docker compose -f src-tauri/tests/databases/compose.yml up -d --wait
+# Development credentials only. Data is discarded with `down`.
+name: mcforge-test-databases
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: mcforge
+      POSTGRES_PASSWORD: mcforge
+      POSTGRES_DB: sales
+    ports: ["54329:5432"]
+    volumes: ["./sales.sql:/docker-entrypoint-initdb.d/sales.sql:ro"]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "mcforge", "-d", "sales"]
+      interval: 2s
+      retries: 30
+
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: sales
+      MYSQL_USER: mcforge
+      MYSQL_PASSWORD: mcforge
+      MYSQL_ROOT_PASSWORD: mcforge
+    ports: ["33069:3306"]
+    volumes: ["./sales.sql:/docker-entrypoint-initdb.d/sales.sql:ro"]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-umcforge", "-pmcforge"]
+      interval: 2s
+      retries: 60

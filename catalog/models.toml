@@ -1,0 +1,92 @@
+# Local models are pulled through Ollama. `size_gb` is the download size of the
+# default (Q4) tag; memory needs are estimated from it in src-tauri/src/recommend.rs.
+# `tools` rates how reliably the model calls MCP tools: poor | fair | good | great.
+
+[[local]]
+id = "qwen3:4b"
+name = "Qwen3 4B"
+params_b = 4.0
+size_gb = 2.5
+tools = "fair"
+
+[[local]]
+id = "llama3.2:3b"
+name = "Llama 3.2 3B"
+params_b = 3.2
+size_gb = 2.0
+tools = "fair"
+
+[[local]]
+id = "qwen3:8b"
+name = "Qwen3 8B"
+params_b = 8.2
+size_gb = 5.2
+tools = "good"
+
+[[local]]
+id = "llama3.1:8b"
+name = "Llama 3.1 8B"
+params_b = 8.0
+size_gb = 4.9
+tools = "good"
+
+[[local]]
+id = "qwen3:14b"
+name = "Qwen3 14B"
+params_b = 14.8
+size_gb = 9.3
+tools = "good"
+
+[[local]]
+id = "gpt-oss:20b"
+name = "gpt-oss 20B"
+params_b = 21.0
+size_gb = 14.0
+tools = "great"
+
+[[local]]
+id = "mistral-small3.2:24b"
+name = "Mistral Small 3.2 24B"
+params_b = 24.0
+size_gb = 15.0
+tools = "great"
+
+[[local]]
+id = "qwen3:30b"
+name = "Qwen3 30B (MoE)"
+params_b = 30.5
+size_gb = 19.0
+tools = "great"
+
+[[local]]
+id = "qwen3:32b"
+name = "Qwen3 32B"
+params_b = 32.8
+size_gb = 20.0
+tools = "great"
+
+[[local]]
+id = "gpt-oss:120b"
+name = "gpt-oss 120B"
+params_b = 117.0
+size_gb = 65.0
+tools = "great"
+
+# API models shown as defaults. OpenAI's list is fetched live from /v1/models
+# once a key is validated, so only Anthropic defaults are pinned here.
+
+[[api]]
+provider = "anthropic"
+id = "claude-sonnet-5-5"
+name = "Claude Sonnet 5.5"
+recommended = true
+
+[[api]]
+provider = "anthropic"
+id = "claude-opus-5-5"
+name = "Claude Opus 5.5"
+
+[[api]]
+provider = "anthropic"
+id = "claude-haiku-5-5"
+name = "Claude Haiku 5.5"

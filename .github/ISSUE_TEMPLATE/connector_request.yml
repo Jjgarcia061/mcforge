@@ -1,0 +1,21 @@
+name: Connector request
+description: Ask for a new app, database or service in the catalog
+labels: [connector]
+body:
+  - type: input
+    id: service
+    attributes:
+      label: Service or app
+    validations:
+      required: true
+  - type: input
+    id: server
+    attributes:
+      label: Existing MCP server (if any)
+      description: Link to its repository or package.
+  - type: textarea
+    id: use
+    attributes:
+      label: What would you use it for?
+    validations:
+      required: true

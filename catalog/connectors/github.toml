@@ -1,0 +1,48 @@
+id = "github"
+name = "GitHub"
+category = "apps"
+description = "Work with issues, pull requests and repositories on GitHub using a personal access token."
+homepage = "https://github.com/github/github-mcp-server"
+verified = false
+
+[server]
+runtime = "http"
+url = "https://api.githubcopilot.com/mcp/"
+
+[server.headers]
+Authorization = "Bearer {{token}}"
+
+[[fields]]
+key = "token"
+label = "Personal access token"
+kind = "secret"
+required = true
+placeholder = "github_pat_…"
+
+[[tools]]
+name = "search_repositories"
+risk = "read"
+
+[[tools]]
+name = "get_file_contents"
+risk = "read"
+
+[[tools]]
+name = "list_issues"
+risk = "read"
+
+[[tools]]
+name = "list_pull_requests"
+risk = "read"
+
+[[tools]]
+name = "create_issue"
+risk = "send"
+
+[[tools]]
+name = "add_issue_comment"
+risk = "send"
+
+[[tools]]
+name = "create_pull_request"
+risk = "send"

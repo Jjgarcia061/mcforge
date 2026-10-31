@@ -1,0 +1,33 @@
+id = "reports"
+name = "Reports from templates"
+category = "reports"
+description = "Turn data from any connection into PDF, Excel, Word or HTML documents using your own templates."
+verified = true
+
+[server]
+runtime = "builtin"
+module = "reports"
+
+[[fields]]
+key = "templates_dir"
+label = "Templates folder"
+kind = "path"
+required = false
+
+[[fields]]
+key = "output_dir"
+label = "Save reports to"
+kind = "path"
+required = true
+
+[[tools]]
+name = "list_templates"
+risk = "read"
+
+[[tools]]
+name = "describe_template"
+risk = "read"
+
+[[tools]]
+name = "render_report"
+risk = "write"

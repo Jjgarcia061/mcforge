@@ -1,0 +1,26 @@
+# Wizard step 3: each use case preselects a set of connectors.
+# Titles and descriptions live in src/i18n/<lang>.json under "useCases.<id>".
+
+[[use_cases]]
+id = "reports"
+connectors = ["reports", "database", "filesystem"]
+
+[[use_cases]]
+id = "files"
+connectors = ["filesystem"]
+
+[[use_cases]]
+id = "data"
+connectors = ["database", "reports"]
+
+[[use_cases]]
+id = "research"
+connectors = ["web-fetch", "filesystem"]
+
+[[use_cases]]
+id = "development"
+connectors = ["git", "github", "filesystem"]
+
+[[use_cases]]
+id = "custom"
+connectors = []

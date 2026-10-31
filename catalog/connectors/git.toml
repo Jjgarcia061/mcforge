@@ -1,0 +1,65 @@
+id = "git"
+name = "Git repository"
+category = "development"
+description = "Inspect history, diffs and branches of a local Git repository; commits need your approval."
+homepage = "https://github.com/modelcontextprotocol/servers/tree/main/src/git"
+verified = false
+
+[server]
+runtime = "uvx"
+package = "mcp-server-git"
+args = ["--repository", "{{repository}}"]
+
+[[fields]]
+key = "repository"
+label = "Repository folder"
+kind = "path"
+required = true
+
+[[tools]]
+name = "git_status"
+risk = "read"
+
+[[tools]]
+name = "git_log"
+risk = "read"
+
+[[tools]]
+name = "git_show"
+risk = "read"
+
+[[tools]]
+name = "git_diff"
+risk = "read"
+
+[[tools]]
+name = "git_diff_staged"
+risk = "read"
+
+[[tools]]
+name = "git_diff_unstaged"
+risk = "read"
+
+[[tools]]
+name = "git_branch"
+risk = "read"
+
+[[tools]]
+name = "git_add"
+risk = "write"
+
+[[tools]]
+name = "git_commit"
+risk = "write"
+
+[[tools]]
+name = "git_create_branch"
+risk = "write"
+
+[[tools]]
+name = "git_checkout"
+risk = "write"
+
+[[tools]]
+name = "git_reset"
+risk = "destructive"

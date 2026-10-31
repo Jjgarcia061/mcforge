@@ -1,0 +1,14 @@
+id = "web-fetch"
+name = "Web pages"
+category = "web"
+description = "Read public web pages and turn them into clean text for the AI."
+homepage = "https://github.com/modelcontextprotocol/servers/tree/main/src/fetch"
+verified = false
+
+[server]
+runtime = "uvx"
+package = "mcp-server-fetch"
+
+[[tools]]
+name = "fetch"
+risk = "network"

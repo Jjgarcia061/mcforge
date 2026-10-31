@@ -1,0 +1,39 @@
+id = "database"
+name = "Databases"
+category = "data"
+description = "Query PostgreSQL, MySQL or SQLite. Read-only by default; writes always need your approval."
+verified = true
+
+[server]
+runtime = "builtin"
+module = "database"
+
+[[fields]]
+key = "driver"
+label = "Database type"
+kind = "select"
+options = ["postgres", "mysql", "sqlite"]
+required = true
+
+[[fields]]
+key = "url"
+label = "Connection URL or file"
+kind = "secret"
+required = true
+placeholder = "postgres://user:pass@host:5432/db · mysql://user:pass@host:3306/db · /path/to/file.db"
+
+[[tools]]
+name = "list_tables"
+risk = "read"
+
+[[tools]]
+name = "describe_table"
+risk = "read"
+
+[[tools]]
+name = "query"
+risk = "read"
+
+[[tools]]
+name = "execute"
+risk = "write"

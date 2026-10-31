@@ -1,0 +1,174 @@
+{
+  "app": {
+    "tagline": "Tu IA, tus herramientas, tus reglas"
+  },
+  "nav": {
+    "back": "Atrás",
+    "next": "Continuar",
+    "stepOf": "Paso {{n}} de {{total}}"
+  },
+  "steps": {
+    "system": {
+      "title": "Tu equipo",
+      "subtitle": "Revisamos lo que tu equipo puede ejecutar para recomendarte algo que funcione de verdad."
+    },
+    "engine": {
+      "title": "Motor de IA",
+      "subtitle": "Usa un modelo en este equipo o conecta la API de un proveedor."
+    },
+    "useCase": {
+      "title": "¿Qué necesitas?",
+      "subtitle": "Elige un objetivo y preseleccionamos las conexiones adecuadas. Puedes ajustarlas."
+    },
+    "connections": {
+      "title": "Conexiones",
+      "subtitle": "Indica a cada conexión dónde trabajar."
+    },
+    "permissions": {
+      "title": "Permisos",
+      "subtitle": "Decide qué puede hacer la IA sola, qué necesita tu visto bueno y qué está prohibido."
+    },
+    "finish": {
+      "title": "Listo",
+      "subtitle": "Revisa tu configuración."
+    }
+  },
+  "system": {
+    "os": "Sistema",
+    "cpu": "Procesador",
+    "cores": "{{count}} núcleos",
+    "memory": "Memoria",
+    "accelerator": "Aceleración",
+    "appleSilicon": "Apple Silicon · memoria unificada",
+    "nvidia": "{{name}} · {{vram}}",
+    "none": "Sin GPU compatible · usa la CPU",
+    "recommended": "El mejor modelo local para ti: {{model}}",
+    "recommendedHint": "Corre fluido aquí y usa herramientas de forma fiable.",
+    "noneFits": "Los modelos locales irían lentos en este equipo",
+    "noneFitsHint": "Una API (Anthropic u OpenAI) te dará una experiencia mucho mejor."
+  },
+  "engine": {
+    "local": "En este equipo",
+    "api": "API de un proveedor",
+    "fit": {
+      "smooth": "Fluido",
+      "usable": "Lento",
+      "tooBig": "No cabe"
+    },
+    "tools": {
+      "poor": "Usa mal las herramientas",
+      "fair": "Uso de herramientas regular",
+      "good": "Buen uso de herramientas",
+      "great": "Excelente con herramientas"
+    },
+    "recommended": "Recomendado",
+    "memoryNeeded": "Necesita ~{{gb}}",
+    "weakTools": "Los modelos pequeños suelen fallar al usar herramientas.",
+    "use": "Usar este",
+    "selected": "Seleccionado",
+    "installed": "Descargado",
+    "download": "Descargar",
+    "ollama": {
+      "checking": "Comprobando Ollama…",
+      "notInstalled": "Los modelos locales funcionan con Ollama, una app gratuita. Instálala y vuelve a comprobar.",
+      "install": "Obtener Ollama",
+      "stopped": "Ollama está instalado pero no se está ejecutando. Ábrelo y vuelve a comprobar.",
+      "retry": "Comprobar de nuevo",
+      "running": "Ollama {{version}} en ejecución"
+    },
+    "provider": {
+      "anthropic": "Anthropic (Claude)",
+      "openai": "OpenAI"
+    },
+    "apiKey": "Clave de API",
+    "keyHint": "Se valida con el proveedor y se guarda en el llavero de tu sistema. Nunca toca el disco.",
+    "connect": "Conectar",
+    "connecting": "Comprobando…",
+    "keySaved": "Conectado con la clave de tu llavero",
+    "replaceKey": "Usar otra clave",
+    "model": "Modelo"
+  },
+  "useCases": {
+    "reports": {
+      "title": "Reportes",
+      "description": "Genera reportes PDF, Excel o Word a partir de tus datos y plantillas."
+    },
+    "files": {
+      "title": "Archivos",
+      "description": "Busca, lee y organiza documentos en las carpetas que elijas."
+    },
+    "data": {
+      "title": "Datos y bases de datos",
+      "description": "Pregunta a tus bases de datos en lenguaje natural."
+    },
+    "research": {
+      "title": "Investigación",
+      "description": "Lee páginas web y guarda lo que encuentres."
+    },
+    "development": {
+      "title": "Desarrollo",
+      "description": "Trabaja con repositorios Git y GitHub."
+    },
+    "custom": {
+      "title": "Personalizado",
+      "description": "Empieza vacío y elige tú las conexiones."
+    }
+  },
+  "useCase": {
+    "suggested": "Sugeridas para {{useCase}}",
+    "more_one": "{{count}} conexión más",
+    "more_other": "{{count}} conexiones más",
+    "extrasChosen_one": "{{count}} añadida",
+    "extrasChosen_other": "{{count}} añadidas"
+  },
+  "categories": {
+    "files": "Archivos",
+    "data": "Datos",
+    "reports": "Reportes",
+    "web": "Web",
+    "development": "Desarrollo",
+    "apps": "Apps"
+  },
+  "connector": {
+    "builtin": "Incluido en MCForge",
+    "external": "Código de terceros",
+    "unverified": "Sin revisar todavía"
+  },
+  "connections": {
+    "nothingToConfigure": "Las conexiones elegidas no necesitan configuración.",
+    "chooseFolder": "Elegir carpeta…",
+    "addFolder": "Añadir carpeta…",
+    "remove": "Quitar",
+    "required": "Obligatorio",
+    "select": "Selecciona…",
+    "test": "Probar conexión",
+    "testing": "Probando…",
+    "testOk_one": "{{title}} · {{count}} tabla",
+    "testOk_other": "{{title}} · {{count}} tablas"
+  },
+  "permissions": {
+    "intro": "MCForge aplica estas reglas en cada llamada. La IA no puede saltárselas.",
+    "allow": "Permitir",
+    "ask": "Preguntarme",
+    "deny": "Bloquear",
+    "risk": {
+      "read": "Lee",
+      "write": "Modifica",
+      "destructive": "Destructivo",
+      "network": "Internet",
+      "send": "Envía por ti"
+    }
+  },
+  "finish": {
+    "engine": "Motor",
+    "local": "Local · {{model}}",
+    "api": "{{provider}} · {{model}}",
+    "connections": "Conexiones",
+    "rules": "{{allow}} permitidas · {{ask}} preguntan antes · {{deny}} bloqueadas",
+    "start": "Empezar",
+    "comingSoon": "Guardar la configuración y el chat llegan en la próxima versión."
+  },
+  "error": {
+    "title": "Algo salió mal"
+  }
+}

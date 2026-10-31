@@ -1,0 +1,69 @@
+id = "filesystem"
+name = "Files & folders"
+category = "files"
+description = "Read, search and organise files inside the folders you choose. Nothing outside them is reachable."
+homepage = "https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem"
+verified = false
+
+[server]
+runtime = "npx"
+package = "@modelcontextprotocol/server-filesystem"
+args = ["{{folders}}"]
+
+[[fields]]
+key = "folders"
+label = "Allowed folders"
+kind = "paths"
+required = true
+
+[[tools]]
+name = "list_allowed_directories"
+risk = "read"
+
+[[tools]]
+name = "list_directory"
+risk = "read"
+
+[[tools]]
+name = "list_directory_with_sizes"
+risk = "read"
+
+[[tools]]
+name = "directory_tree"
+risk = "read"
+
+[[tools]]
+name = "search_files"
+risk = "read"
+
+[[tools]]
+name = "get_file_info"
+risk = "read"
+
+[[tools]]
+name = "read_text_file"
+risk = "read"
+
+[[tools]]
+name = "read_media_file"
+risk = "read"
+
+[[tools]]
+name = "read_multiple_files"
+risk = "read"
+
+[[tools]]
+name = "create_directory"
+risk = "write"
+
+[[tools]]
+name = "write_file"
+risk = "write"
+
+[[tools]]
+name = "edit_file"
+risk = "write"
+
+[[tools]]
+name = "move_file"
+risk = "destructive"
