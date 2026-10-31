@@ -12,6 +12,7 @@ React UI (src/)  ──  typed IPC (src/lib/bindings.ts, generated)  ──  Rus
                                                                        ├─ sources    CSV and spreadsheet files → cached read-only SQLite tables
                                                                        ├─ reports    plan → query → explain → render (MiniJinja + SVG charts)
                                                                        ├─ library    folders → passages, full-text + vector search, answers with citations, file map
+                                                                       ├─ chat       conversations with tool calls under the permission gate
                                                                        ├─ setup      saved setup (JSON) with secrets in the keychain
                                                                        ├─ policy     allow / ask / deny gate
                                                                        ├─ secrets    OS keychain
@@ -53,6 +54,16 @@ The library indexes folders the user picks (`.md`, `.txt`, `.html`, `.docx`, `.p
 
 The PDF parser can panic on documents it does not support. Releases unwind instead of aborting so that `catch_unwind` turns that into one unreadable file rather than a crash.
 
+## Chat
+
+`providers/stream.rs` streams answers with tool calls from the three providers (Anthropic and OpenAI over server-sent events, Ollama as JSON lines) behind one `ChatModel` trait; a small decoder per provider turns its format into text deltas and complete tool calls.
+
+`chat::run_turn` is the agent loop: it sends the conversation and the tools, and for every tool call asks `Tools::permission` before anything runs. *Allow* runs it, *deny* returns an error to the model, *ask* emits `ApprovalNeeded` and waits for `answer_approval` (allow once, allow always, which saves the rule in the setup, or reject). Results go back to the model until it answers or 8 steps pass. Every call is written to `activity.json` in the app data folder.
+
+The tools (`chat/tools.rs`) are MCForge's own modules, offered only when set up: `library_search`, the database connector's `list_tables`, `describe_table`, `query` (read-only, enforced by the database) and `execute`, and the reports connector's `list_templates` and `render_report`, which can only read files the user attached to that conversation. Tool output is clipped for small context windows, and older tool output is shortened when the conversation grows.
+
+Conversations are saved as JSON in `chats/`, before and after every turn; `stop_chat` cancels a turn and the saved conversation keeps what it finished, with any unanswered tool call marked as cancelled.
+
 ## Database connector
 
 `database.rs` exposes two types so the compiler keeps reads and writes apart:
@@ -67,7 +78,7 @@ For extra safety, connect with a database user that only has the privileges you 
 | Phase | Scope |
 |---|---|
 | F0 | Structure, catalog, hardware & recommendation, setup wizard, saved setup, CSV and spreadsheet reports (HTML) |
-| F1 | Chat with streaming and tool calling (Anthropic, OpenAI, Ollama) |
+| F1 | Chat with streaming and tool calling (Anthropic, OpenAI, Ollama) over MCForge's own tools — done |
 | F2 | MCP host: launch servers, enforce policy, audit log, activity view; persist setup |
 | F3 | More report formats (PDF via Typst, XLSX, DOCX), database sources, more templates |
 | F4 | Larger catalog, export config to other MCP clients, signed installers |

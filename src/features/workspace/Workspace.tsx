@@ -1,21 +1,22 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Badge, Button } from "../../components/ui";
+import { Button } from "../../components/ui";
 import { useAppData } from "../../lib/data";
 import { modelName } from "../../lib/engine";
 import { useSession } from "../../lib/session";
+import { ChatView } from "../chat/ChatView";
 import { LibraryView } from "../library/LibraryView";
 import { ReportsView } from "../reports/ReportsView";
 import { fromSetup, useWizard } from "../setup-wizard/store";
 
-const VIEWS = ["reports", "library"] as const;
+const VIEWS = ["chat", "reports", "library"] as const;
 type View = (typeof VIEWS)[number];
 
 export function Workspace() {
   const { t } = useTranslation();
   const { catalog } = useAppData();
   const setup = useSession((s) => s.setup);
-  const [view, setView] = useState<View>("reports");
+  const [view, setView] = useState<View>("chat");
 
   function editSetup() {
     if (!setup) return;
@@ -47,10 +48,6 @@ export function Workspace() {
               {t(`workspace.${v}`)}
             </button>
           ))}
-          <div className="flex items-center justify-between px-3 py-2 text-zinc-400">
-            {t("workspace.chat")}
-            <Badge>{t("workspace.soon")}</Badge>
-          </div>
         </nav>
         {setup && (
           <div className="mt-auto space-y-3 border-t border-zinc-200 pt-4 text-sm dark:border-zinc-800">
@@ -66,7 +63,7 @@ export function Workspace() {
       </aside>
       {/* Each view sets its own width: forms stay narrow, the report viewer uses the whole area. */}
       <main className="min-w-0 flex-1 overflow-y-auto px-10 py-8">
-        {view === "reports" ? <ReportsView /> : <LibraryView />}
+        {view === "chat" ? <ChatView /> : view === "reports" ? <ReportsView /> : <LibraryView />}
       </main>
     </div>
   );

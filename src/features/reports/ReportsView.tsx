@@ -8,7 +8,6 @@ import {
   errorMessage,
   unwrap,
   type Focus,
-  type NumberFormat,
   type ReportEntry,
   type ReportOutcome,
   type ReportStage,
@@ -19,6 +18,7 @@ import {
 } from "../../lib/api";
 import { useAppData } from "../../lib/data";
 import { modelName } from "../../lib/engine";
+import { numberFormat } from "../../lib/format";
 import { useSession } from "../../lib/session";
 import { FocusPicker } from "./FocusPicker";
 import { RecentReports } from "./RecentReports";
@@ -29,15 +29,6 @@ const AI_STAGES: ReportStage[] = ["planning", "writing"];
 const SHOWN_COLUMNS = 14;
 const DELIMITERS: Record<string, string> = { ",": "comma", ";": "semicolon", tab: "tab", "|": "pipe" };
 const EXTENSIONS = ["csv", "tsv", "txt", "xlsx", "xlsm", "xlsb", "xls", "ods"];
-
-/** The separators this system writes numbers with, so the report reads naturally. */
-function numberFormat(locale?: string): NumberFormat {
-  const parts = new Intl.NumberFormat(locale).formatToParts(1234567.5);
-  return {
-    decimal: parts.find((p) => p.type === "decimal")?.value ?? ".",
-    group: parts.find((p) => p.type === "group")?.value ?? ",",
-  };
-}
 
 type Run = { stage: ReportStage } | { outcome: ReportOutcome } | { error: string } | { cancelled: true };
 

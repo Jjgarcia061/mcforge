@@ -179,7 +179,6 @@
     "reports": "Reportes",
     "library": "Biblioteca",
     "chat": "Chat",
-    "soon": "Pronto",
     "engine": "Motor de IA",
     "editSetup": "Cambiar configuración"
   },
@@ -346,5 +345,56 @@
     "noEngine": "Configura un motor de IA para hacer preguntas.",
     "apiNote": "Solo los fragmentos relevantes se envían a {{provider}}.",
     "nothingFound": "No encontré nada en tu biblioteca sobre eso."
+  },
+  "chat": {
+    "title": "Chat",
+    "welcome": "Pregunta lo que quieras. Puedo buscar en tu biblioteca, consultar tu base de datos y crear reportes de los archivos que adjuntes; si algo modifica datos, primero te pido permiso.",
+    "noEngine": "Configura un motor de IA en «Cambiar configuración» para empezar.",
+    "new": "Nueva conversación",
+    "delete": "Borrar conversación",
+    "attached": "Archivos adjuntos",
+    "thinking": "Pensando…",
+    "placeholder": "Escribe tu pregunta… (Enter envía, Shift+Enter salto de línea)",
+    "attach": "Adjuntar",
+    "stop": "Detener",
+    "send": "Enviar",
+    "details": "Ver detalles",
+    "viewReport": "Ver reporte «{{title}}»",
+    "tool": {
+      "library_search": "Buscó en tu biblioteca",
+      "database_list_tables": "Revisó las tablas de tu base de datos",
+      "database_describe_table": "Revisó las columnas de",
+      "database_query": "Consultó tu base de datos",
+      "database_execute": "Modificar tu base de datos",
+      "reports_list_templates": "Revisó las plantillas",
+      "reports_render_report": "Crear un reporte"
+    },
+    "decision": {
+      "blocked": "Bloqueado por tus reglas",
+      "rejected": "Rechazado",
+      "approved": "Aprobado"
+    },
+    "approval": {
+      "ask": "Tus reglas piden tu permiso antes de hacer esto:",
+      "once": "Permitir",
+      "always": "Permitir siempre",
+      "reject": "No permitir"
+    },
+    "summary": {
+      "passages_one": "{{count}} fragmento de tus documentos",
+      "passages_other": "{{count}} fragmentos de tus documentos",
+      "rows_one": "{{count}} fila",
+      "rows_other": "{{count}} filas",
+      "tables_one": "{{count}} tabla",
+      "tables_other": "{{count}} tablas",
+      "columns_one": "{{count}} columna",
+      "columns_other": "{{count}} columnas",
+      "changed_one": "{{count}} fila modificada",
+      "changed_other": "{{count}} filas modificadas",
+      "templates_one": "{{count}} plantilla",
+      "templates_other": "{{count}} plantillas",
+      "report_one": "{{count}} sección",
+      "report_other": "{{count}} secciones"
+    }
   }
 }

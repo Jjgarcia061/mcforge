@@ -152,6 +152,10 @@ impl Message {
 #[derive(Debug, Clone, Serialize, specta::Type)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum ChatEvent {
+    /// First event of a turn: the conversation it belongs to, new or not.
+    Started {
+        id: String,
+    },
     Text {
         text: String,
     },
@@ -574,6 +578,7 @@ mod tests {
             .unwrap()
             .iter()
             .map(|e| match e {
+                ChatEvent::Started { .. } => "started-turn",
                 ChatEvent::Text { .. } => "text",
                 ChatEvent::ToolStarted { .. } => "started",
                 ChatEvent::ApprovalNeeded { .. } => "approval",

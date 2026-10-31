@@ -582,6 +582,9 @@ pub async fn send_message(
     }
     chat.ask(&text);
     state.chats.save(&chat)?;
+    drop(on_event.send(ChatEvent::Started {
+        id: chat.id.clone(),
+    }));
     if let Ok(mut pending) = state.approvals.lock() {
         pending.clear();
     }

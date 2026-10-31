@@ -179,7 +179,6 @@
     "reports": "Reports",
     "library": "Library",
     "chat": "Chat",
-    "soon": "Soon",
     "engine": "AI engine",
     "editSetup": "Change setup"
   },
@@ -346,5 +345,56 @@
     "noEngine": "Set up an AI engine to ask questions.",
     "apiNote": "Only the relevant passages are sent to {{provider}}.",
     "nothingFound": "I found nothing in your library about that."
+  },
+  "chat": {
+    "title": "Chat",
+    "welcome": "Ask anything. I can search your library, query your database and create reports from the files you attach; anything that changes data asks you first.",
+    "noEngine": "Set up an AI engine in “Change setup” to start.",
+    "new": "New conversation",
+    "delete": "Delete conversation",
+    "attached": "Attached files",
+    "thinking": "Thinking…",
+    "placeholder": "Type your question… (Enter sends, Shift+Enter for a new line)",
+    "attach": "Attach",
+    "stop": "Stop",
+    "send": "Send",
+    "details": "Details",
+    "viewReport": "View report “{{title}}”",
+    "tool": {
+      "library_search": "Searched your library",
+      "database_list_tables": "Checked your database tables",
+      "database_describe_table": "Checked the columns of",
+      "database_query": "Queried your database",
+      "database_execute": "Change your database",
+      "reports_list_templates": "Checked the templates",
+      "reports_render_report": "Create a report"
+    },
+    "decision": {
+      "blocked": "Blocked by your rules",
+      "rejected": "Declined",
+      "approved": "Approved"
+    },
+    "approval": {
+      "ask": "Your rules ask for your permission before doing this:",
+      "once": "Allow",
+      "always": "Always allow",
+      "reject": "Don't allow"
+    },
+    "summary": {
+      "passages_one": "{{count}} passage from your documents",
+      "passages_other": "{{count}} passages from your documents",
+      "rows_one": "{{count}} row",
+      "rows_other": "{{count}} rows",
+      "tables_one": "{{count}} table",
+      "tables_other": "{{count}} tables",
+      "columns_one": "{{count}} column",
+      "columns_other": "{{count}} columns",
+      "changed_one": "{{count}} row changed",
+      "changed_other": "{{count}} rows changed",
+      "templates_one": "{{count}} template",
+      "templates_other": "{{count}} templates",
+      "report_one": "{{count}} section",
+      "report_other": "{{count}} sections"
+    }
   }
 }

@@ -148,12 +148,16 @@ export type ChatContext = {
 export type ChatEvent = ChatEvent_Serialize | ChatEvent_Deserialize;
 
 /**  Streamed to the UI while a turn runs. */
-export type ChatEvent_Deserialize = { kind: "text"; text: string } | { kind: "toolStarted"; id: string; name: string; input: unknown } | 
+export type ChatEvent_Deserialize = 
+/**  First event of a turn: the conversation it belongs to, new or not. */
+{ kind: "started"; id: string } | { kind: "text"; text: string } | { kind: "toolStarted"; id: string; name: string; input: unknown } | 
 /**  The rules ask first: the turn waits for `answer_approval`. */
 { kind: "approvalNeeded"; id: string; name: string; input: unknown } | { kind: "toolFinished"; id: string; isError: boolean; view: ToolView_Deserialize };
 
 /**  Streamed to the UI while a turn runs. */
-export type ChatEvent_Serialize = { kind: "text"; text: string } | { kind: "toolStarted"; id: string; name: string; input: unknown } | 
+export type ChatEvent_Serialize = 
+/**  First event of a turn: the conversation it belongs to, new or not. */
+{ kind: "started"; id: string } | { kind: "text"; text: string } | { kind: "toolStarted"; id: string; name: string; input: unknown } | 
 /**  The rules ask first: the turn waits for `answer_approval`. */
 { kind: "approvalNeeded"; id: string; name: string; input: unknown } | { kind: "toolFinished"; id: string; isError: boolean; view: ToolView_Serialize };
 
