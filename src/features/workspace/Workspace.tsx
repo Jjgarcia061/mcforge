@@ -1,15 +1,21 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge, Button } from "../../components/ui";
 import { useAppData } from "../../lib/data";
 import { modelName } from "../../lib/engine";
 import { useSession } from "../../lib/session";
+import { LibraryView } from "../library/LibraryView";
 import { ReportsView } from "../reports/ReportsView";
 import { fromSetup, useWizard } from "../setup-wizard/store";
+
+const VIEWS = ["reports", "library"] as const;
+type View = (typeof VIEWS)[number];
 
 export function Workspace() {
   const { t } = useTranslation();
   const { catalog } = useAppData();
   const setup = useSession((s) => s.setup);
+  const [view, setView] = useState<View>("reports");
 
   function editSetup() {
     if (!setup) return;
@@ -27,9 +33,20 @@ export function Workspace() {
           <div className="text-xs text-zinc-500">{t("app.tagline")}</div>
         </div>
         <nav className="space-y-1 text-sm">
-          <div className="rounded-lg bg-orange-50 px-3 py-2 font-medium text-orange-700 dark:bg-orange-950/50 dark:text-orange-300">
-            {t("workspace.reports")}
-          </div>
+          {VIEWS.map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setView(v)}
+              className={
+                v === view
+                  ? "block w-full rounded-lg bg-orange-50 px-3 py-2 text-left font-medium text-orange-700 dark:bg-orange-950/50 dark:text-orange-300"
+                  : "block w-full rounded-lg px-3 py-2 text-left text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              }
+            >
+              {t(`workspace.${v}`)}
+            </button>
+          ))}
           <div className="flex items-center justify-between px-3 py-2 text-zinc-400">
             {t("workspace.chat")}
             <Badge>{t("workspace.soon")}</Badge>
@@ -49,7 +66,7 @@ export function Workspace() {
       </aside>
       {/* Each view sets its own width: forms stay narrow, the report viewer uses the whole area. */}
       <main className="min-w-0 flex-1 overflow-y-auto px-10 py-8">
-        <ReportsView />
+        {view === "reports" ? <ReportsView /> : <LibraryView />}
       </main>
     </div>
   );

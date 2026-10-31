@@ -49,6 +49,7 @@ The library indexes folders the user picks (`.md`, `.txt`, `.html`, `.docx`, `.p
 - **Answers.** `ask_library` gives the model the best passages, numbered, and asks for an answer that cites them as `[n]`; citations to anything else are dropped.
 - **Map.** After each update, `graph.rs` links every file to its closest files (by vector, or by shared words without one) and to the files it links in Markdown (`[[Note]]`, `[text](file.md)`), then groups them into topics with Louvain, named after their most distinctive words. `library_graph` returns it.
 - `open_file` also opens indexed files; anything else is refused.
+- **Drawing.** The Library screen draws the map with `d3-force` on a canvas (`src/features/library/graphView.ts`). Names appear only around the file under the cursor. From about 80 files a force starts holding the files inside a side-view outline of a human brain, and from 300 on they fill it, each of the eight largest topics settling where a lobe would be.
 
 The PDF parser can panic on documents it does not support. Releases unwind instead of aborting so that `catch_unwind` turns that into one unreadable file rather than a crash.
 

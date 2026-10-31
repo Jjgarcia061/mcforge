@@ -177,6 +177,7 @@
   },
   "workspace": {
     "reports": "Reportes",
+    "library": "Biblioteca",
     "chat": "Chat",
     "soon": "Pronto",
     "engine": "Motor de IA",
@@ -291,5 +292,60 @@
       "browser": "Abrir en el navegador",
       "folder": "Carpeta"
     }
+  },
+  "library": {
+    "title": "Biblioteca",
+    "subtitle": "Tus documentos, buscables y conectados. Pregunta y la IA responde citando de dónde sale cada dato.",
+    "folders": "Carpetas",
+    "foldersHint": "Elige las carpetas con tus documentos (PDF, Word, Markdown, texto o HTML). MCForge solo las lee; nunca escribe en ellas.",
+    "stats_one": "{{count}} documento · {{chunks}} fragmentos",
+    "stats_other": "{{count}} documentos · {{chunks}} fragmentos",
+    "failed_one": "{{count}} sin texto",
+    "failed_other": "{{count}} sin texto",
+    "updated": "Actualizada el {{date}}",
+    "neverUpdated": "Todavía no se ha leído",
+    "pending": "{{added}} nuevos, {{changed}} modificados, {{removed}} eliminados",
+    "unembedded_one": "{{count}} fragmento por preparar para buscar por significado",
+    "unembedded_other": "{{count}} fragmentos por preparar para buscar por significado",
+    "update": "Actualizar",
+    "phase": {
+      "scanning": "Buscando cambios en tus carpetas",
+      "reading": "Leyendo",
+      "embedding": "Preparando la búsqueda por significado",
+      "mapping": "Dibujando el mapa"
+    },
+    "done": "Listo: {{added}} nuevos · {{changed}} modificados · {{removed}} eliminados",
+    "failedFiles_one": "{{count}} archivo no tiene texto legible",
+    "failedFiles_other": "{{count}} archivos no tienen texto legible",
+    "embedError": "La búsqueda por significado no quedó al día; mientras tanto se busca por palabras. Detalle: {{detail}}",
+    "model": {
+      "ready": "Búsqueda por significado activa",
+      "missing": "Para buscar por significado y no solo por palabras, descarga el modelo de búsqueda {{name}} ({{size}} GB). Funciona en tu equipo; tus documentos no salen de él.",
+      "download": "Descargar modelo de búsqueda",
+      "offline": "Ollama no está abierto: por ahora se busca solo por palabras. Ábrelo para buscar también por significado."
+    },
+    "graph": {
+      "aria": "Mapa de {{files}} documentos agrupados en {{topics}} temas",
+      "noTopic": "Sin tema",
+      "connections_one": "{{count}} conexión",
+      "connections_other": "{{count}} conexiones",
+      "others_one": "{{count}} sin tema",
+      "others_other": "{{count}} sin tema u otros",
+      "hint": "Arrastra para moverte · pellizca o ⌘ + rueda para acercar · clic para ver",
+      "zoomIn": "Acercar",
+      "zoomOut": "Alejar",
+      "fit": "Ver todo"
+    },
+    "topic": "Tema: {{topic}}",
+    "open": "Abrir",
+    "related": "Relacionados:",
+    "ask": "Pregunta a tus documentos",
+    "askPlaceholder": "Ej.: ¿Cuál es el descuento máximo que puede autorizar un vendedor?",
+    "askButton": "Preguntar",
+    "asking": "Buscando…",
+    "noEngine": "Configura un motor de IA para hacer preguntas.",
+    "apiNote": "Solo los fragmentos relevantes se envían a {{provider}}.",
+    "localNote": "Todo ocurre en tu equipo.",
+    "nothingFound": "No encontré nada en tu biblioteca sobre eso."
   }
 }

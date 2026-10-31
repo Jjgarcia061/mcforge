@@ -177,6 +177,7 @@
   },
   "workspace": {
     "reports": "Reports",
+    "library": "Library",
     "chat": "Chat",
     "soon": "Soon",
     "engine": "AI engine",
@@ -291,5 +292,60 @@
       "browser": "Open in browser",
       "folder": "Folder"
     }
+  },
+  "library": {
+    "title": "Library",
+    "subtitle": "Your documents, searchable and connected. Ask, and the AI answers citing where each fact comes from.",
+    "folders": "Folders",
+    "foldersHint": "Choose the folders with your documents (PDF, Word, Markdown, text or HTML). MCForge only reads them; it never writes to them.",
+    "stats_one": "{{count}} document · {{chunks}} passages",
+    "stats_other": "{{count}} documents · {{chunks}} passages",
+    "failed_one": "{{count}} without text",
+    "failed_other": "{{count}} without text",
+    "updated": "Updated {{date}}",
+    "neverUpdated": "Not read yet",
+    "pending": "{{added}} new, {{changed}} changed, {{removed}} removed",
+    "unembedded_one": "{{count}} passage to prepare for search by meaning",
+    "unembedded_other": "{{count}} passages to prepare for search by meaning",
+    "update": "Update",
+    "phase": {
+      "scanning": "Looking for changes in your folders",
+      "reading": "Reading",
+      "embedding": "Preparing search by meaning",
+      "mapping": "Drawing the map"
+    },
+    "done": "Done: {{added}} new · {{changed}} changed · {{removed}} removed",
+    "failedFiles_one": "{{count}} file has no readable text",
+    "failedFiles_other": "{{count}} files have no readable text",
+    "embedError": "Search by meaning is not up to date; words still work meanwhile. Detail: {{detail}}",
+    "model": {
+      "ready": "Search by meaning is on",
+      "missing": "To search by meaning and not just by words, download the search model {{name}} ({{size}} GB). It runs on your computer; your documents never leave it.",
+      "download": "Download search model",
+      "offline": "Ollama is not open: for now search works by words only. Open it to search by meaning too."
+    },
+    "graph": {
+      "aria": "Map of {{files}} documents grouped into {{topics}} topics",
+      "noTopic": "No topic",
+      "connections_one": "{{count}} connection",
+      "connections_other": "{{count}} connections",
+      "others_one": "{{count}} without a topic",
+      "others_other": "{{count}} without a topic or other",
+      "hint": "Drag to move · pinch or ⌘ + wheel to zoom · click to see",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "fit": "Show all"
+    },
+    "topic": "Topic: {{topic}}",
+    "open": "Open",
+    "related": "Related:",
+    "ask": "Ask your documents",
+    "askPlaceholder": "E.g. What is the largest discount a seller can approve?",
+    "askButton": "Ask",
+    "asking": "Searching…",
+    "noEngine": "Set up an AI engine to ask questions.",
+    "apiNote": "Only the relevant passages are sent to {{provider}}.",
+    "localNote": "Everything happens on your computer.",
+    "nothingFound": "I found nothing in your library about that."
   }
 }
