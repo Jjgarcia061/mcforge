@@ -1,27 +1,40 @@
-# Wizard step 3: each use case preselects a set of connectors.
-# Titles and descriptions live in src/i18n/<lang>.json under "useCases.<id>".
+# The setup interview: what the user wants to do. Each task preselects the
+# connections it needs and says what the local model must be good at, which
+# drives the model recommendation (`skills` weights, added to `tools`, which
+# always counts because the chat uses tools). `embedding` adds the library's
+# search model. Titles and descriptions live in src/i18n/<lang>.json under
+# "useCases.<id>".
 
-# CSV files are read by the reports screen itself; databases and folders are optional extras.
+# The library and its questions are built in; no connection needed.
+[[use_cases]]
+id = "documents"
+connectors = []
+skills = { analysis = 1 }
+embedding = true
+
+# CSV and Excel files are read by the reports screen itself.
 [[use_cases]]
 id = "reports"
 connectors = ["reports"]
-
-[[use_cases]]
-id = "files"
-connectors = ["filesystem"]
+skills = { analysis = 2 }
 
 [[use_cases]]
 id = "data"
 connectors = ["database", "reports"]
-
-[[use_cases]]
-id = "research"
-connectors = ["web-fetch", "filesystem"]
+skills = { code = 1.5, analysis = 1 }
 
 [[use_cases]]
 id = "development"
 connectors = ["git", "github", "filesystem"]
+skills = { code = 2 }
 
 [[use_cases]]
-id = "custom"
-connectors = []
+id = "research"
+connectors = ["web-fetch", "filesystem"]
+skills = { analysis = 1 }
+embedding = true
+
+[[use_cases]]
+id = "files"
+connectors = ["filesystem"]
+skills = { tools = 1 }

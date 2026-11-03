@@ -33,8 +33,9 @@ const web: Connector = { ...files, id: "web", fields: [], tools: [{ name: "fetch
 const catalog: Catalog = {
   connectors: [files, web],
   useCases: [
-    { id: "files", connectors: ["filesystem"] },
-    { id: "custom", connectors: [] },
+    { id: "files", connectors: ["filesystem"], skills: {}, embedding: false },
+    { id: "research", connectors: ["web", "filesystem"], skills: { analysis: 1 }, embedding: true },
+    { id: "documents", connectors: [], skills: {}, embedding: true },
   ],
   models: { local: [], api: [], embedding: [] },
   focuses: [],
@@ -46,25 +47,32 @@ const at = (step: (typeof STEPS)[number]) => state().goTo(STEPS.indexOf(step));
 describe("setup wizard", () => {
   beforeEach(() => useWizard.setState(initialState));
 
-  it("a use case preselects its connectors", () => {
-    state().chooseUseCase(catalog, "files");
+  it("tasks preselect the union of their connections and keep shared ones", () => {
+    state().toggleUseCase(catalog, "files");
     expect(state().connectors).toEqual(["filesystem"]);
+    state().toggleUseCase(catalog, "research");
+    expect(state().connectors).toEqual(["filesystem", "web"]);
+    state().toggleUseCase(catalog, "research");
+    expect(state().connectors, "files still needs the filesystem").toEqual(["filesystem"]);
+    expect(state().needs.useCases).toEqual(["files"]);
     state().toggleConnector("filesystem");
     expect(state().connectors).toEqual([]);
   });
 
-  it("requires an engine and at least one connector", () => {
+  it("requires a task, then an engine", () => {
+    at("useCase");
+    expect(canContinue(state(), catalog)).toBe(false);
+    state().toggleUseCase(catalog, "documents");
+    expect(canContinue(state(), catalog), "a task with no connections is fine").toBe(true);
+
     at("engine");
     expect(canContinue(state(), catalog)).toBe(false);
     state().setEngine({ kind: "local", model: "qwen3:8b" });
     expect(canContinue(state(), catalog)).toBe(true);
-
-    at("useCase");
-    expect(canContinue(state(), catalog)).toBe(false);
   });
 
   it("blocks until required fields are filled", () => {
-    state().chooseUseCase(catalog, "files");
+    state().toggleUseCase(catalog, "files");
     at("connections");
     expect(missingFields(state(), files)).toEqual(["folders"]);
     expect(canContinue(state(), catalog)).toBe(false);
@@ -79,14 +87,14 @@ describe("setup wizard", () => {
     expect(permissionOf(state(), files, "move")).toBe("ask");
   });
 
-  it("splits suggested connectors from the rest; custom suggests all", () => {
+  it("splits suggested connectors from the rest", () => {
     const ids = (cs: Connector[]) => cs.map((c) => c.id);
-    const forFiles = suggestedConnectors(catalog, "files");
+    const forFiles = suggestedConnectors(catalog, ["files"]);
     expect(ids(forFiles.suggested)).toEqual(["filesystem"]);
     expect(ids(forFiles.others)).toEqual(["web"]);
-    const custom = suggestedConnectors(catalog, "custom");
-    expect(ids(custom.suggested)).toEqual(["filesystem", "web"]);
-    expect(custom.others).toEqual([]);
+    const none = suggestedConnectors(catalog, ["documents"]);
+    expect(none.suggested).toEqual([]);
+    expect(ids(none.others)).toEqual(["filesystem", "web"]);
   });
 
   it("never navigates outside the steps", () => {
@@ -99,12 +107,14 @@ describe("setup wizard", () => {
   it("round-trips the answers through a saved setup", () => {
     expect(toSetup(state())).toBeNull();
     state().setEngine({ kind: "local", model: "qwen3:8b" });
-    state().chooseUseCase(catalog, "files");
+    state().toggleUseCase(catalog, "files");
+    state().setLanguage("spanish");
+    state().setPriority("quality");
     state().setValue("filesystem", "folders", ["/data"]);
     const setup = toSetup(state());
     expect(setup).toEqual({
       engine: { kind: "local", model: "qwen3:8b" },
-      useCase: "files",
+      needs: { useCases: ["files"], language: "spanish", priority: "quality" },
       connectors: ["filesystem"],
       values: { filesystem: { folders: ["/data"] } },
       permissions: {},

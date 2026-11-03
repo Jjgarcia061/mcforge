@@ -1,6 +1,13 @@
 # Local models are pulled through Ollama. `size_gb` is the download size of the
 # default (Q4) tag; memory needs are estimated from it in src-tauri/src/recommend.rs.
-# `tools` rates how reliably the model calls MCP tools: poor | fair | good | great.
+# Ratings (poor | fair | good | great) drive the recommendation after the
+# setup interview:
+#   tools     how reliably it calls tools (the chat always uses them)
+#   analysis  reasoning over data, structured answers, report conclusions
+#   code      code and SQL
+#   spanish   quality in Spanish (and other languages besides English)
+# `active_params_b` is set for mixture-of-experts models, which run about as fast
+# as a model of that size although they need the memory of the full one.
 
 [[local]]
 id = "qwen3:4b"
@@ -8,6 +15,9 @@ name = "Qwen3 4B"
 params_b = 4.0
 size_gb = 2.5
 tools = "fair"
+analysis = "fair"
+code = "fair"
+spanish = "good"
 
 [[local]]
 id = "llama3.2:3b"
@@ -15,6 +25,9 @@ name = "Llama 3.2 3B"
 params_b = 3.2
 size_gb = 2.0
 tools = "fair"
+analysis = "poor"
+code = "poor"
+spanish = "fair"
 
 [[local]]
 id = "qwen3:8b"
@@ -22,6 +35,9 @@ name = "Qwen3 8B"
 params_b = 8.2
 size_gb = 5.2
 tools = "good"
+analysis = "good"
+code = "good"
+spanish = "good"
 
 [[local]]
 id = "llama3.1:8b"
@@ -29,6 +45,19 @@ name = "Llama 3.1 8B"
 params_b = 8.0
 size_gb = 4.9
 tools = "good"
+analysis = "fair"
+code = "fair"
+spanish = "fair"
+
+[[local]]
+id = "qwen2.5:7b-instruct"
+name = "Qwen2.5 7B"
+params_b = 7.6
+size_gb = 4.7
+tools = "good"
+analysis = "good"
+code = "good"
+spanish = "good"
 
 [[local]]
 id = "qwen3:14b"
@@ -36,6 +65,9 @@ name = "Qwen3 14B"
 params_b = 14.8
 size_gb = 9.3
 tools = "good"
+analysis = "good"
+code = "good"
+spanish = "great"
 
 [[local]]
 id = "gpt-oss:20b"
@@ -43,6 +75,10 @@ name = "gpt-oss 20B"
 params_b = 21.0
 size_gb = 14.0
 tools = "great"
+analysis = "great"
+code = "good"
+spanish = "good"
+active_params_b = 3.6
 
 [[local]]
 id = "mistral-small3.2:24b"
@@ -50,6 +86,9 @@ name = "Mistral Small 3.2 24B"
 params_b = 24.0
 size_gb = 15.0
 tools = "great"
+analysis = "good"
+code = "good"
+spanish = "great"
 
 [[local]]
 id = "qwen3:30b"
@@ -57,6 +96,10 @@ name = "Qwen3 30B (MoE)"
 params_b = 30.5
 size_gb = 19.0
 tools = "great"
+analysis = "great"
+code = "great"
+spanish = "great"
+active_params_b = 3.3
 
 [[local]]
 id = "qwen3:32b"
@@ -64,6 +107,9 @@ name = "Qwen3 32B"
 params_b = 32.8
 size_gb = 20.0
 tools = "great"
+analysis = "great"
+code = "great"
+spanish = "great"
 
 [[local]]
 id = "gpt-oss:120b"
@@ -71,6 +117,10 @@ name = "gpt-oss 120B"
 params_b = 117.0
 size_gb = 65.0
 tools = "great"
+analysis = "great"
+code = "great"
+spanish = "good"
+active_params_b = 5.1
 
 # The model that turns library passages into vectors, to search by meaning.
 # `query_prefix` is prepended to questions (not to passages), as the model expects.

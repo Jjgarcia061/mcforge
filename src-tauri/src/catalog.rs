@@ -168,7 +168,16 @@ pub enum Risk {
 pub struct UseCase {
     pub id: String,
     pub connectors: Vec<String>,
+    /// What the local model must be good at for this task, as weights by skill name.
+    #[serde(default)]
+    pub skills: BTreeMap<String, f64>,
+    /// Whether the task uses the library, which needs the search model.
+    #[serde(default)]
+    pub embedding: bool,
 }
+
+/// The skills a local model is rated on; use cases weigh them.
+pub const SKILLS: [&str; 4] = ["tools", "analysis", "code", "spanish"];
 
 /// A built-in report focus; the UI names it, the model reads `instructions`.
 #[derive(Debug, Clone, Deserialize, Serialize, specta::Type)]
@@ -206,14 +215,31 @@ pub struct LocalModel {
     pub name: String,
     pub params_b: f64,
     pub size_gb: f64,
-    pub tools: ToolSkill,
+    pub tools: Rating,
+    pub analysis: Rating,
+    pub code: Rating,
+    pub spanish: Rating,
+    /// For mixture-of-experts models: the parameters used per token, which set the speed.
+    #[serde(default)]
+    pub active_params_b: Option<f64>,
+}
+
+impl LocalModel {
+    pub fn rating(&self, skill: &str) -> Rating {
+        match skill {
+            "analysis" => self.analysis,
+            "code" => self.code,
+            "spanish" => self.spanish,
+            _ => self.tools,
+        }
+    }
 }
 
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize, specta::Type,
 )]
 #[serde(rename_all = "camelCase")]
-pub enum ToolSkill {
+pub enum Rating {
     Poor,
     Fair,
     Good,
@@ -321,6 +347,12 @@ impl Catalog {
         }
 
         for u in &self.use_cases {
+            for skill in u.skills.keys().filter(|k| !SKILLS.contains(&k.as_str())) {
+                problems.push(format!(
+                    "use case `{}` weighs unknown skill `{skill}`",
+                    u.id
+                ));
+            }
             for c in u.connectors.iter().filter(|c| !ids.contains(c.as_str())) {
                 problems.push(format!(
                     "use case `{}` references unknown connector `{c}`",

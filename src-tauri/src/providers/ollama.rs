@@ -43,6 +43,20 @@ struct Tags {
 #[derive(Deserialize)]
 struct Tag {
     name: String,
+    #[serde(default)]
+    size: u64,
+    #[serde(default)]
+    modified_at: String,
+}
+
+/// A model in Ollama's store.
+#[derive(Debug, Clone, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct InstalledModel {
+    pub name: String,
+    pub size_gb: f64,
+    /// RFC 3339.
+    pub modified: String,
 }
 
 pub async fn status(http: &reqwest::Client) -> Result<OllamaStatus> {
@@ -65,6 +79,55 @@ pub async fn status(http: &reqwest::Client) -> Result<OllamaStatus> {
         .map(|t| t.name)
         .collect();
     Ok(OllamaStatus::Running { version, models })
+}
+
+/// The models Ollama has, with their size on disk.
+pub async fn installed(http: &reqwest::Client) -> Result<Vec<InstalledModel>> {
+    let tags = http
+        .get(format!("{BASE}/api/tags"))
+        .send()
+        .await
+        .map_err(|_| Error::Provider("Ollama is not running. Open it and try again.".into()))?
+        .json::<Tags>()
+        .await?;
+    Ok(tags
+        .models
+        .into_iter()
+        .map(|t| InstalledModel {
+            name: t.name,
+            size_gb: (t.size as f64 / 1e8).round() / 10.0,
+            modified: t.modified_at,
+        })
+        .collect())
+}
+
+/// Removes a model from Ollama's store.
+pub async fn delete(http: &reqwest::Client, model: &str) -> Result<()> {
+    let res = http
+        .delete(format!("{BASE}/api/delete"))
+        .json(&serde_json::json!({ "model": model }))
+        .send()
+        .await?;
+    if !res.status().is_success() {
+        let body: String = res
+            .text()
+            .await
+            .unwrap_or_default()
+            .chars()
+            .take(200)
+            .collect();
+        return Err(Error::Provider(format!(
+            "Ollama could not delete {model}: {body}"
+        )));
+    }
+    Ok(())
+}
+
+/// Where Ollama keeps its models: `OLLAMA_MODELS`, or `.ollama/models` in the home folder.
+pub fn models_dir() -> Option<PathBuf> {
+    std::env::var_os("OLLAMA_MODELS")
+        .map(PathBuf::from)
+        .or_else(|| std::env::home_dir().map(|home| home.join(".ollama").join("models")))
 }
 
 /// Downloads a model, reporting each progress line Ollama streams back.

@@ -17,8 +17,7 @@ function acceleratorLabel(t: TFunction, acc: Hardware["accelerator"]) {
 
 export function SystemStep() {
   const { t } = useTranslation();
-  const { hardware, recommendations } = useAppData().report;
-  const pick = recommendations.find((r) => r.recommended);
+  const { hardware, capacity, runsLocal } = useAppData().report;
 
   const rows = [
     [t("system.os"), hardware.os],
@@ -39,11 +38,11 @@ export function SystemStep() {
           ))}
         </dl>
       </Card>
-      {pick ? (
+      {runsLocal ? (
         <Notice tone="good">
-          <strong>{t("system.recommended", { model: pick.model.name })}</strong>
+          <strong>{t("system.capacity", { gb: gb(capacity.fastGb) })}</strong>
           <br />
-          {t("system.recommendedHint")}
+          {t("system.capacityHint")}
         </Notice>
       ) : (
         <Notice tone="warn">

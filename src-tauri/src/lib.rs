@@ -32,6 +32,9 @@ use crate::reports::history::History;
 pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
     tauri_specta::Builder::<tauri::Wry>::new().commands(tauri_specta::collect_commands![
         commands::system_report,
+        commands::recommend_models,
+        commands::local_models,
+        commands::delete_model,
         commands::get_catalog,
         commands::ollama_status,
         commands::pull_model,

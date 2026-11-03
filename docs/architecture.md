@@ -6,7 +6,7 @@ MCForge is two layers with one boundary between them.
 React UI (src/)  ──  typed IPC (src/lib/bindings.ts, generated)  ──  Rust core (src-tauri/src/)
                                                                        ├─ catalog    TOML manifests → validated data
                                                                        ├─ hardware   RAM / CPU / GPU detection
-                                                                       ├─ recommend  hardware × models → ranking
+                                                                       ├─ recommend  hardware × interview answers × models → one model to download
                                                                        ├─ providers  Anthropic, OpenAI, Ollama (keys, models, JSON answers)
                                                                        ├─ database   built-in PostgreSQL / MySQL / SQLite connector
                                                                        ├─ sources    CSV and spreadsheet files → cached read-only SQLite tables
@@ -30,12 +30,15 @@ React UI (src/)  ──  typed IPC (src/lib/bindings.ts, generated)  ──  Rus
 ## Data flow of the setup wizard
 
 1. On start the core loads the catalog from the bundled `catalog/` resource folder and detects the hardware.
-2. `system_report` ranks local models for this machine (`recommend.rs`).
-3. `ollama_status` / `pull_model` manage local models through Ollama's HTTP API; download progress streams over a Tauri channel.
-4. `connect_provider` validates an API key by listing models, then stores it in the keychain. `saved_provider_models` reuses a stored key.
-5. Use cases (`catalog/use-cases.toml`) preselect connectors; each connector's `fields` become a form and its `tools` become permission toggles.
-6. `test_connection` checks a connector's values before saving. Today the built-in database connector supports it.
-7. `save_setup` writes the setup to the app's config folder; `secret` field values go to the keychain instead. `load_setup` fills them back in, and the app opens on the workspace from then on.
+2. `system_report` describes the machine and how much memory models can use on it.
+3. The interview (`catalog/use-cases.toml`): the user picks tasks, a language and speed or quality. Each task weighs skills that every local model is rated on in `catalog/models.toml` (tools, analysis, code, Spanish). `recommend_models` (`recommend.rs`) scores the models that run on this machine, prefers a model already installed when it is nearly as good, adds the library's search model when a task needs it, and checks free disk space, so one download covers everything chosen.
+4. `ollama_status` / `pull_model` manage local models through Ollama's HTTP API; download progress streams over a Tauri channel.
+5. `connect_provider` validates an API key by listing models, then stores it in the keychain. `saved_provider_models` reuses a stored key.
+6. The chosen tasks preselect connectors; each connector's `fields` become a form and its `tools` become permission toggles.
+7. `test_connection` checks a connector's values before saving. Today the built-in database connector supports it.
+8. `save_setup` writes the setup, interview answers included, to the app's config folder; `secret` field values go to the keychain instead. `load_setup` fills them back in, and the app opens on the workspace from then on.
+
+The **Models** screen (`local_models`, `delete_model`) lists what Ollama has downloaded, switches the model in use and deletes the rest; it never deletes the model in use or the library's search model.
 
 ## Reports
 

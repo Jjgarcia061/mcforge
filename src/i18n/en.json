@@ -19,7 +19,7 @@
     },
     "useCase": {
       "title": "What do you need?",
-      "subtitle": "Pick a goal; we preselect the right connections. You can adjust them."
+      "subtitle": "Tell us what you will do: we pick the connections and the model that suit you best."
     },
     "connections": {
       "title": "Connections",
@@ -43,10 +43,10 @@
     "appleSilicon": "Apple Silicon · unified memory",
     "nvidia": "{{name}} · {{vram}}",
     "none": "No supported GPU · runs on CPU",
-    "recommended": "Best local model for you: {{model}}",
-    "recommendedHint": "It runs smoothly here and handles tools reliably.",
     "noneFits": "Local models would be slow on this computer",
-    "noneFitsHint": "An API (Anthropic or OpenAI) will give you a much better experience."
+    "noneFitsHint": "An API (Anthropic or OpenAI) will give you a much better experience.",
+    "capacity": "Your computer runs models that use up to {{gb}} of memory smoothly.",
+    "capacityHint": "Next, tell us what you will do and we will recommend one so you do not download more than you need."
   },
   "engine": {
     "local": "On this computer",
@@ -89,9 +89,16 @@
     "replaceKey": "Use a different key",
     "model": "Model",
     "otherInstalled": "Other downloaded models",
-    "otherInstalledHint": "They are on this computer but not in MCForge's catalog, so we can't say how well they use tools."
+    "otherInstalledHint": "They are on this computer but not in MCForge's catalog, so we can't say how well they use tools.",
+    "others_one": "One more option",
+    "others_other": "Other options ({{count}})",
+    "othersHint": "Ordered by how well they cover what you chose and how they run on your computer."
   },
   "useCases": {
+    "documents": {
+      "title": "Documents",
+      "description": "Ask your PDFs, Word files and notes, and get answers with citations."
+    },
     "reports": {
       "title": "Reports",
       "description": "Turn CSV and Excel files into reports with charts and conclusions."
@@ -111,18 +118,33 @@
     "development": {
       "title": "Development",
       "description": "Work with Git repositories and GitHub."
-    },
-    "custom": {
-      "title": "Custom",
-      "description": "Start empty and pick connections yourself."
     }
   },
   "useCase": {
-    "suggested": "Suggested for {{useCase}}",
+    "suggested": "Suggested connections",
     "more_one": "{{count}} more connection",
     "more_other": "{{count}} more connections",
     "extrasChosen_one": "{{count}} added",
-    "extrasChosen_other": "{{count}} added"
+    "extrasChosen_other": "{{count}} added",
+    "tasks": "What do you want to do?",
+    "tasksHint": "Pick everything that applies: we recommend one model that covers it all.",
+    "language": "Which language do you work in?",
+    "languages": {
+      "spanish": "Spanish",
+      "english": "English",
+      "both": "Both"
+    },
+    "priority": "What do you prefer?",
+    "priorities": {
+      "fast": "Fast",
+      "balanced": "Balanced",
+      "quality": "Best quality"
+    },
+    "priorityHints": {
+      "fast": "Quick answers from a light model.",
+      "balanced": "Good quality without the wait.",
+      "quality": "The most capable model your computer can run, even if slower."
+    }
   },
   "categories": {
     "files": "Files",
@@ -178,6 +200,7 @@
   "workspace": {
     "reports": "Reports",
     "library": "Library",
+    "models": "Models",
     "chat": "Chat",
     "engine": "AI engine",
     "editSetup": "Change setup"
@@ -396,5 +419,43 @@
       "report_one": "{{count}} section",
       "report_other": "{{count}} sections"
     }
+  },
+  "kit": {
+    "title": "Recommended for you",
+    "search": "search model {{name}} ({{size}}) for your library",
+    "weak": "No model that runs well here calls tools reliably. An API will give better results.",
+    "downloadAndUse": "Download and use ({{gb}})",
+    "use": "Use this model",
+    "inUse": "In use",
+    "toDownload": "To download: {{gb}}",
+    "allInstalled": "You already have everything",
+    "free": "Free: {{gb}}",
+    "noSpace": "Not enough space: you need {{need}} and {{free}} is left. Delete models you do not use in “Models”.",
+    "downloading": "Downloading {{model}}…",
+    "noneRuns": "No catalog model runs well on your computer. An API is the better choice."
+  },
+  "reason": {
+    "installed": "Already downloaded",
+    "fitsSmooth": "Runs smoothly here",
+    "fastMoe": "Fast for its size",
+    "toolsGreat": "Great at using tools",
+    "analysisGreat": "Great at analysing data",
+    "codeGreat": "Great with code and SQL",
+    "spanishGreat": "Excellent in Spanish"
+  },
+  "models": {
+    "title": "Models",
+    "subtitle": "The models downloaded on this computer. Switch the one you use, or delete the ones you do not need to free space.",
+    "apiNote": "You use a model through an API; local models are optional.",
+    "installed": "Downloaded",
+    "used": "Using {{gb}}",
+    "loading": "Checking Ollama…",
+    "empty": "No models downloaded yet.",
+    "inUse": "In use",
+    "search": "Search",
+    "use": "Use",
+    "delete": "Delete",
+    "cannotDelete": "It is in use; choose another one before deleting it.",
+    "confirmDelete": "Delete {{model}}? It frees {{gb}}. You can download it again any time."
   }
 }

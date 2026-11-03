@@ -6,10 +6,11 @@ import { modelName } from "../../lib/engine";
 import { useSession } from "../../lib/session";
 import { ChatView } from "../chat/ChatView";
 import { LibraryView } from "../library/LibraryView";
+import { ModelsView } from "../models/ModelsView";
 import { ReportsView } from "../reports/ReportsView";
 import { fromSetup, useWizard } from "../setup-wizard/store";
 
-const VIEWS = ["chat", "reports", "library"] as const;
+const VIEWS = ["chat", "reports", "library", "models"] as const;
 type View = (typeof VIEWS)[number];
 
 export function Workspace() {
@@ -63,7 +64,15 @@ export function Workspace() {
       </aside>
       {/* Each view sets its own width: forms stay narrow, the report viewer uses the whole area. */}
       <main className="min-w-0 flex-1 overflow-y-auto px-10 py-8">
-        {view === "chat" ? <ChatView /> : view === "reports" ? <ReportsView /> : <LibraryView />}
+        {view === "chat" ? (
+          <ChatView />
+        ) : view === "reports" ? (
+          <ReportsView />
+        ) : view === "library" ? (
+          <LibraryView />
+        ) : (
+          <ModelsView />
+        )}
       </main>
     </div>
   );

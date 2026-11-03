@@ -19,7 +19,7 @@
     },
     "useCase": {
       "title": "¿Qué necesitas?",
-      "subtitle": "Elige un objetivo y preseleccionamos las conexiones adecuadas. Puedes ajustarlas."
+      "subtitle": "Cuéntanos qué vas a hacer: elegimos las conexiones y el modelo que mejor te sirven."
     },
     "connections": {
       "title": "Conexiones",
@@ -43,10 +43,10 @@
     "appleSilicon": "Apple Silicon · memoria unificada",
     "nvidia": "{{name}} · {{vram}}",
     "none": "Sin GPU compatible · usa la CPU",
-    "recommended": "El mejor modelo local para ti: {{model}}",
-    "recommendedHint": "Corre fluido aquí y usa herramientas de forma fiable.",
     "noneFits": "Los modelos locales irían lentos en este equipo",
-    "noneFitsHint": "Una API (Anthropic u OpenAI) te dará una experiencia mucho mejor."
+    "noneFitsHint": "Una API (Anthropic u OpenAI) te dará una experiencia mucho mejor.",
+    "capacity": "Tu equipo corre con fluidez modelos que usan hasta {{gb}} de memoria.",
+    "capacityHint": "En el siguiente paso cuéntanos qué vas a hacer y te recomendamos uno para no descargar de más."
   },
   "engine": {
     "local": "En este equipo",
@@ -89,9 +89,16 @@
     "replaceKey": "Usar otra clave",
     "model": "Modelo",
     "otherInstalled": "Otros modelos descargados",
-    "otherInstalledHint": "Están en tu equipo pero no en el catálogo de MCForge, así que no sabemos qué tan bien usan las herramientas."
+    "otherInstalledHint": "Están en tu equipo pero no en el catálogo de MCForge, así que no sabemos qué tan bien usan las herramientas.",
+    "others_one": "Otra opción",
+    "others_other": "Otras opciones ({{count}})",
+    "othersHint": "Ordenadas por lo bien que cubren lo que elegiste y cómo corren en tu equipo."
   },
   "useCases": {
+    "documents": {
+      "title": "Documentos",
+      "description": "Pregunta a tus PDF, Word y notas, y recibe respuestas con citas."
+    },
     "reports": {
       "title": "Reportes",
       "description": "Convierte archivos CSV y de Excel en reportes con gráficas y conclusiones."
@@ -111,18 +118,33 @@
     "development": {
       "title": "Desarrollo",
       "description": "Trabaja con repositorios Git y GitHub."
-    },
-    "custom": {
-      "title": "Personalizado",
-      "description": "Empieza vacío y elige tú las conexiones."
     }
   },
   "useCase": {
-    "suggested": "Sugeridas para {{useCase}}",
+    "suggested": "Conexiones sugeridas",
     "more_one": "{{count}} conexión más",
     "more_other": "{{count}} conexiones más",
     "extrasChosen_one": "{{count}} añadida",
-    "extrasChosen_other": "{{count}} añadidas"
+    "extrasChosen_other": "{{count}} añadidas",
+    "tasks": "¿Qué quieres hacer?",
+    "tasksHint": "Elige todo lo que aplique: te recomendamos un modelo que cubra todo.",
+    "language": "¿En qué idioma trabajas?",
+    "languages": {
+      "spanish": "Español",
+      "english": "Inglés",
+      "both": "Ambos"
+    },
+    "priority": "¿Qué prefieres?",
+    "priorities": {
+      "fast": "Rápido",
+      "balanced": "Equilibrado",
+      "quality": "Máxima calidad"
+    },
+    "priorityHints": {
+      "fast": "Respuestas ágiles, con un modelo ligero.",
+      "balanced": "Buena calidad sin hacer esperar.",
+      "quality": "El modelo más capaz que tu equipo pueda correr, aunque tarde más."
+    }
   },
   "categories": {
     "files": "Archivos",
@@ -178,6 +200,7 @@
   "workspace": {
     "reports": "Reportes",
     "library": "Biblioteca",
+    "models": "Modelos",
     "chat": "Chat",
     "engine": "Motor de IA",
     "editSetup": "Cambiar configuración"
@@ -396,5 +419,43 @@
       "report_one": "{{count}} sección",
       "report_other": "{{count}} secciones"
     }
+  },
+  "kit": {
+    "title": "Recomendado para ti",
+    "search": "modelo de búsqueda {{name}} ({{size}}) para tu biblioteca",
+    "weak": "Ningún modelo que corra bien en tu equipo usa herramientas con fiabilidad. Con una API tendrás mejores resultados.",
+    "downloadAndUse": "Descargar y usar ({{gb}})",
+    "use": "Usar este modelo",
+    "inUse": "En uso",
+    "toDownload": "Por descargar: {{gb}}",
+    "allInstalled": "Ya tienes todo lo necesario",
+    "free": "Libre: {{gb}}",
+    "noSpace": "No hay espacio suficiente: necesitas {{need}} y quedan {{free}}. Borra modelos que no uses en «Modelos».",
+    "downloading": "Descargando {{model}}…",
+    "noneRuns": "Ningún modelo del catálogo corre bien en tu equipo. Te conviene usar una API."
+  },
+  "reason": {
+    "installed": "Ya lo tienes",
+    "fitsSmooth": "Corre fluido en tu equipo",
+    "fastMoe": "Rápido para su tamaño",
+    "toolsGreat": "Usa herramientas muy bien",
+    "analysisGreat": "Muy bueno analizando datos",
+    "codeGreat": "Muy bueno con código y SQL",
+    "spanishGreat": "Excelente en español"
+  },
+  "models": {
+    "title": "Modelos",
+    "subtitle": "Los modelos descargados en este equipo. Cambia el que usas o borra los que no necesites para liberar espacio.",
+    "apiNote": "Usas un modelo por API; los modelos locales son opcionales.",
+    "installed": "Descargados",
+    "used": "Ocupan {{gb}}",
+    "loading": "Revisando Ollama…",
+    "empty": "Todavía no hay modelos descargados.",
+    "inUse": "En uso",
+    "search": "Búsqueda",
+    "use": "Usar",
+    "delete": "Borrar",
+    "cannotDelete": "Está en uso; elige otro antes de borrarlo.",
+    "confirmDelete": "¿Borrar {{model}}? Libera {{gb}}. Puedes volver a descargarlo cuando quieras."
   }
 }

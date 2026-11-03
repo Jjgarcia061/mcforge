@@ -12,6 +12,7 @@ use crate::catalog::{Catalog, FieldKind, FieldValue, Values};
 use crate::error::{Error, Result};
 use crate::policy::Permission;
 use crate::providers::Provider;
+use crate::recommend::Needs;
 use crate::secrets;
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, specta::Type)]
@@ -25,7 +26,9 @@ pub enum Engine {
 #[serde(rename_all = "camelCase")]
 pub struct Setup {
     pub engine: Engine,
-    pub use_case: Option<String>,
+    /// The answers to the setup interview, kept to recommend models later.
+    #[serde(default)]
+    pub needs: Needs,
     pub connectors: Vec<String>,
     #[serde(default)]
     pub values: HashMap<String, Values>,
@@ -80,8 +83,17 @@ pub fn load(path: &Path, catalog: &Catalog) -> Result<Option<Setup>> {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
         Err(e) => return Err(e.into()),
     };
-    let mut setup: Setup =
-        serde_json::from_slice(&json).map_err(|e| Error::Io(format!("{}: {e}", path.display())))?;
+    let invalid = |e: serde_json::Error| Error::Io(format!("{}: {e}", path.display()));
+    let mut raw: serde_json::Value = serde_json::from_slice(&json).map_err(invalid)?;
+    // Setups saved before the interview had a single `useCase`.
+    if let Some(obj) = raw.as_object_mut()
+        && !obj.contains_key("needs")
+        && let Some(old) = obj.remove("useCase")
+    {
+        let use_cases: Vec<serde_json::Value> = old.as_str().map(Into::into).into_iter().collect();
+        obj.insert("needs".into(), serde_json::json!({ "useCases": use_cases }));
+    }
+    let mut setup: Setup = serde_json::from_value(raw).map_err(invalid)?;
     // Connectors removed from the catalog since the last save are dropped, not fatal.
     setup.connectors.retain(|id| catalog.connector(id).is_ok());
     for id in &setup.connectors {
@@ -127,7 +139,7 @@ mod tests {
             engine: Engine::Local {
                 model: "qwen3:8b".into(),
             },
-            use_case: Some("data".into()),
+            needs: Needs::default(),
             connectors: vec!["database".into()],
             values: HashMap::from([
                 (
@@ -159,6 +171,21 @@ mod tests {
             "unselected connectors are dropped: {json}"
         );
         assert_eq!(setup.text("database", "driver"), Some("postgres"));
+    }
+
+    #[test]
+    fn setups_from_before_the_interview_keep_their_goal() {
+        let dir = std::env::temp_dir().join(format!("mcforge-setup-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("setup.json");
+        std::fs::write(
+            &file,
+            r#"{"engine":{"kind":"local","model":"qwen2.5:7b-instruct"},"useCase":"reports","connectors":["reports"],"values":{},"permissions":{}}"#,
+        )
+        .unwrap();
+        let setup = load(&file, &catalog()).unwrap().unwrap();
+        assert_eq!(setup.needs.use_cases, ["reports"]);
+        std::fs::remove_dir_all(dir).ok();
     }
 
     #[test]

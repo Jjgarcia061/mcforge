@@ -10,12 +10,14 @@ import {
   unwrap,
   type Catalog,
   type Fit,
+  type ModelAdvice,
   type OllamaStatus,
   type Provider,
   type PullProgress,
   type Recommendation,
 } from "../../../lib/api";
 import { useAppData } from "../../../lib/data";
+import { KitCard } from "../../models/KitCard";
 import { useWizard } from "../store";
 
 const FIT_TONE: Record<Fit, "good" | "warn" | "bad"> = { smooth: "good", usable: "warn", tooBig: "bad" };
@@ -25,11 +27,9 @@ const OPENAI_NON_CHAT = /audio|realtime|tts|transcribe|image|search|embedding|mo
 
 export function EngineStep() {
   const { t } = useTranslation();
-  const { recommendations } = useAppData().report;
+  const { runsLocal } = useAppData().report;
   const engine = useWizard((s) => s.engine);
-  const [tab, setTab] = useState<"local" | "api">(
-    engine?.kind ?? (recommendations.some((r) => r.recommended) ? "local" : "api"),
-  );
+  const [tab, setTab] = useState<"local" | "api">(engine?.kind ?? (runsLocal ? "local" : "api"));
 
   return (
     <div className="space-y-5">
@@ -48,18 +48,23 @@ export function EngineStep() {
 
 function LocalModels() {
   const { t } = useTranslation();
-  const { recommendations } = useAppData().report;
+  const needs = useWizard((s) => s.needs);
+  const { engine, setEngine } = useWizard();
   const [status, setStatus] = useState<OllamaStatus | null>(null);
+  const [advice, setAdvice] = useState<ModelAdvice | null>(null);
   const [pulling, setPulling] = useState<{ model: string; progress: number | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(
     () =>
-      unwrap(commands.ollamaStatus()).then(
-        (s) => setStatus(s),
-        (e) => setError(errorMessage(e)),
+      Promise.all([unwrap(commands.ollamaStatus()), unwrap(commands.recommendModels(needs))]).then(
+        ([s, a]) => {
+          setStatus(s);
+          setAdvice(a);
+        },
+        (e: unknown) => setError(errorMessage(e)),
       ),
-    [],
+    [needs],
   );
   useEffect(() => void refresh(), [refresh]);
 
@@ -79,26 +84,42 @@ function LocalModels() {
     }
   }
 
-  const installed = status?.state === "running" ? status.models : [];
-  const others = installed.filter((m) => !recommendations.some((r) => r.model.id === m));
+  const running = status?.state === "running";
+  const installed = running ? status.models : [];
+  const ranked = advice?.ranked ?? [];
+  const others = installed.filter((m) => !ranked.some((r) => r.model.id === m) && m !== advice?.kit.search?.id);
 
   return (
     <div className="space-y-4">
       <OllamaBanner status={status} onRetry={refresh} />
       {error && <Notice tone="bad">{error}</Notice>}
-      <div className="space-y-2">
-        {recommendations.map((r) => (
-          <ModelCard
-            key={r.model.id}
-            rec={r}
-            installed={installed.includes(r.model.id)}
-            canDownload={status?.state === "running" && pulling === null}
-            progress={pulling?.model === r.model.id ? pulling.progress : undefined}
-            onDownload={() => void download(r.model.id)}
-          />
-        ))}
-      </div>
-      <p className="text-xs text-zinc-500">{t("engine.weakTools")}</p>
+      {advice && (
+        <KitCard
+          advice={advice}
+          current={engine?.kind === "local" ? engine.model : undefined}
+          canDownload={running}
+          onReady={(model) => setEngine({ kind: "local", model })}
+          onDownloaded={() => void refresh()}
+        />
+      )}
+      <details className="group">
+        <summary className="cursor-pointer text-sm font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">
+          {t("engine.others", { count: ranked.length })}
+        </summary>
+        <div className="mt-3 space-y-2">
+          <p className="text-xs text-zinc-500">{t("engine.othersHint")}</p>
+          {ranked.map((r) => (
+            <ModelCard
+              key={r.model.id}
+              rec={r}
+              canDownload={running && pulling === null}
+              progress={pulling?.model === r.model.id ? pulling.progress : undefined}
+              onDownload={() => void download(r.model.id)}
+            />
+          ))}
+          <p className="text-xs text-zinc-500">{t("engine.weakTools")}</p>
+        </div>
+      </details>
       {others.length > 0 && (
         <div className="space-y-2 pt-2">
           <div>
@@ -159,13 +180,11 @@ function OllamaBanner({ status, onRetry }: { status: OllamaStatus | null; onRetr
 
 function ModelCard({
   rec,
-  installed,
   canDownload,
   progress,
   onDownload,
 }: {
   rec: Recommendation;
-  installed: boolean;
   canDownload: boolean;
   progress: number | null | undefined;
   onDownload: () => void;
@@ -188,10 +207,15 @@ function ModelCard({
           <div className="mt-1 text-xs text-zinc-500">
             {rec.model.id} · {gb(rec.model.sizeGb)} · {t("engine.memoryNeeded", { gb: gb(rec.memoryNeededGb) })}
           </div>
+          {rec.reasons.length > 0 && (
+            <div className="mt-1.5 text-xs text-zinc-500">
+              {rec.reasons.map((r) => t(`reason.${r}`)).join(" · ")}
+            </div>
+          )}
         </div>
         {runnable && (
           <div className="flex shrink-0 gap-2">
-            {installed ? (
+            {rec.installed ? (
               <Badge tone="good">{t("engine.installed")}</Badge>
             ) : (
               progress === undefined && (

@@ -80,6 +80,17 @@ fn parse_nvidia(csv: &str) -> Option<Accelerator> {
     })
 }
 
+/// Free space in GB on the disk that holds `path`: the one with the longest
+/// matching mount point.
+pub fn free_space_gb(path: &std::path::Path) -> Option<f64> {
+    let disks = sysinfo::Disks::new_with_refreshed_list().ok()?;
+    disks
+        .iter()
+        .filter(|d| path.starts_with(d.mount_point()))
+        .max_by_key(|d| d.mount_point().as_os_str().len())
+        .map(|d| round1(d.available_space() as f64 / GB))
+}
+
 fn round1(v: f64) -> f64 {
     (v * 10.0).round() / 10.0
 }

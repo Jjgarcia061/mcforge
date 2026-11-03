@@ -1,13 +1,14 @@
 import { create } from "zustand";
-import type { Catalog, Connector, Engine, FieldValue, Permission, Setup } from "../../lib/api";
+import type { Catalog, Connector, Engine, FieldValue, Language, Needs, Permission, Priority, Setup } from "../../lib/api";
 
-export const STEPS = ["system", "engine", "useCase", "connections", "permissions", "finish"] as const;
+// The interview (`useCase`) comes before the engine, so the model recommendation knows the answers.
+export const STEPS = ["system", "useCase", "engine", "connections", "permissions", "finish"] as const;
 export type Step = (typeof STEPS)[number];
 
 export interface WizardState {
   step: number;
   engine: Engine | null;
-  useCase: string | null;
+  needs: Needs;
   connectors: string[];
   values: Record<string, Record<string, FieldValue>>;
   permissions: Record<string, Record<string, Permission>>;
@@ -16,7 +17,9 @@ export interface WizardState {
 interface WizardActions {
   goTo: (step: number) => void;
   setEngine: (engine: Engine | null) => void;
-  chooseUseCase: (catalog: Catalog, id: string) => void;
+  toggleUseCase: (catalog: Catalog, id: string) => void;
+  setLanguage: (language: Language) => void;
+  setPriority: (priority: Priority) => void;
   toggleConnector: (id: string) => void;
   setValue: (connector: string, key: string, value: FieldValue) => void;
   setPermission: (connector: string, tool: string, permission: Permission) => void;
@@ -25,7 +28,7 @@ interface WizardActions {
 export const initialState: WizardState = {
   step: 0,
   engine: null,
-  useCase: null,
+  needs: { useCases: [], language: "both", priority: "balanced" },
   connectors: [],
   values: {},
   permissions: {},
@@ -35,8 +38,22 @@ export const useWizard = create<WizardState & WizardActions>()((set) => ({
   ...initialState,
   goTo: (step) => set({ step: Math.max(0, Math.min(STEPS.length - 1, step)) }),
   setEngine: (engine) => set({ engine }),
-  chooseUseCase: (catalog, id) =>
-    set({ useCase: id, connectors: [...(catalog.useCases.find((u) => u.id === id)?.connectors ?? [])] }),
+  toggleUseCase: (catalog, id) =>
+    set((s) => {
+      const on = !s.needs.useCases.includes(id);
+      const useCases = on ? [...s.needs.useCases, id] : s.needs.useCases.filter((u) => u !== id);
+      const own = catalog.useCases.find((u) => u.id === id)?.connectors ?? [];
+      // Turning a task off drops its connections, unless another chosen task needs them too.
+      const stillNeeded = new Set(
+        catalog.useCases.filter((u) => useCases.includes(u.id)).flatMap((u) => u.connectors),
+      );
+      const connectors = on
+        ? [...s.connectors, ...own.filter((c) => !s.connectors.includes(c))]
+        : s.connectors.filter((c) => !own.includes(c) || stillNeeded.has(c));
+      return { needs: { ...s.needs, useCases }, connectors };
+    }),
+  setLanguage: (language) => set((s) => ({ needs: { ...s.needs, language } })),
+  setPriority: (priority) => set((s) => ({ needs: { ...s.needs, priority } })),
   toggleConnector: (id) =>
     set((s) => ({
       connectors: s.connectors.includes(id) ? s.connectors.filter((c) => c !== id) : [...s.connectors, id],
@@ -52,8 +69,8 @@ export const useWizard = create<WizardState & WizardActions>()((set) => ({
 /** The wizard's answers as a setup to save, once an engine is chosen. */
 export function toSetup(state: WizardState): Setup | null {
   if (!state.engine) return null;
-  const { engine, useCase, connectors, values, permissions } = state;
-  return { engine, useCase, connectors, values, permissions };
+  const { engine, needs, connectors, values, permissions } = state;
+  return { engine, needs, connectors, values, permissions };
 }
 
 /** Wizard answers prefilled from a saved setup, for changing it. */
@@ -61,13 +78,13 @@ export function fromSetup(setup: Setup): WizardState {
   return { ...initialState, ...setup, step: STEPS.indexOf("engine") };
 }
 
-/** Connectors a use case suggests (in its order) and the rest of the catalog. An empty use case suggests everything. */
-export function suggestedConnectors(catalog: Catalog, useCase: string | null) {
-  const ids = catalog.useCases.find((u) => u.id === useCase)?.connectors ?? [];
-  if (ids.length === 0) return { suggested: catalog.connectors, others: [] };
+/** Connectors the chosen tasks suggest (in catalog order) and the rest of the catalog. */
+export function suggestedConnectors(catalog: Catalog, useCases: string[]) {
+  const ids = new Set(catalog.useCases.filter((u) => useCases.includes(u.id)).flatMap((u) => u.connectors));
+  if (ids.size === 0) return { suggested: [], others: catalog.connectors };
   return {
-    suggested: ids.flatMap((id) => catalog.connectors.filter((c) => c.id === id)),
-    others: catalog.connectors.filter((c) => !ids.includes(c.id)),
+    suggested: catalog.connectors.filter((c) => ids.has(c.id)),
+    others: catalog.connectors.filter((c) => !ids.has(c.id)),
   };
 }
 
@@ -100,7 +117,7 @@ export function canContinue(state: WizardState, catalog: Catalog): boolean {
     case "engine":
       return state.engine !== null;
     case "useCase":
-      return state.connectors.length > 0;
+      return state.needs.useCases.length > 0;
     case "connections":
       return selectedConnectors(state, catalog).every((c) => missingFields(state, c).length === 0);
     default:

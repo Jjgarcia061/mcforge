@@ -4,7 +4,12 @@ import { invoke as __TAURI_INVOKE, Channel } from "@tauri-apps/api/core";
 
 /** Commands */
 export const commands = {
-	systemReport: () => __TAURI_INVOKE<SystemReport_Serialize>("system_report"),
+	systemReport: () => __TAURI_INVOKE<SystemReport>("system_report"),
+	/**  Local models for the interview's answers: the kit to download and every model ranked. */
+	recommendModels: (needs: Needs_Deserialize) => typedError<ModelAdvice_Serialize, AppError>(__TAURI_INVOKE("recommend_models", { needs })),
+	localModels: () => typedError<LocalModels_Serialize, AppError>(__TAURI_INVOKE("local_models")),
+	/**  Deletes a downloaded model, except the one the setup uses and the library's search model. */
+	deleteModel: (name: string) => typedError<null, AppError>(__TAURI_INVOKE("delete_model", { name })),
 	getCatalog: () => __TAURI_INVOKE<Catalog_Serialize>("get_catalog"),
 	ollamaStatus: () => typedError<OllamaStatus, AppError>(__TAURI_INVOKE("ollama_status")),
 	pullModel: (model: string, onProgress: Channel<PullProgress_Deserialize>) => typedError<null, AppError>(__TAURI_INVOKE("pull_model", { model, onProgress })),
@@ -117,18 +122,24 @@ export type Attachment_Serialize = {
 /**  Connectors implemented inside MCForge itself. */
 export type BuiltinModule = "database" | "reports";
 
+/**  Memory a model can use while staying fast, and the most it can use at all. */
+export type Capacity = {
+	fastGb: number | null,
+	maxGb: number | null,
+};
+
 export type Catalog = Catalog_Serialize | Catalog_Deserialize;
 
 export type Catalog_Deserialize = {
 	connectors: Connector_Deserialize[],
-	useCases: UseCase[],
+	useCases: UseCase_Deserialize[],
 	models: Models_Deserialize,
 	focuses: FocusPreset[],
 };
 
 export type Catalog_Serialize = {
 	connectors: Connector_Serialize[],
-	useCases: UseCase[],
+	useCases: UseCase_Serialize[],
 	models: Models_Serialize,
 	focuses: FocusPreset[],
 };
@@ -324,6 +335,49 @@ export type Hardware = {
 	accelerator: Accelerator,
 };
 
+/**  A model in Ollama's store. */
+export type InstalledModel = {
+	name: string,
+	sizeGb: number | null,
+	/**  RFC 3339. */
+	modified: string,
+};
+
+/**  What to download to cover everything the user chose. */
+export type Kit = Kit_Serialize | Kit_Deserialize;
+
+/**  What to download to cover everything the user chose. */
+export type Kit_Deserialize = {
+	/**  The model for everything; `None` when no model runs on this machine. */
+	main?: string | null,
+	/**  The best model that runs here still calls tools unreliably. */
+	weak: boolean,
+	/**  The library's search model, when a chosen task needs it. */
+	search?: EmbeddingModel_Deserialize | null,
+	searchInstalled: boolean,
+	/**  What is not installed yet. */
+	downloadGb: number | null,
+	freeGb?: number | null,
+	enoughSpace: boolean,
+};
+
+/**  What to download to cover everything the user chose. */
+export type Kit_Serialize = {
+	/**  The model for everything; `None` when no model runs on this machine. */
+	main: string | null,
+	/**  The best model that runs here still calls tools unreliably. */
+	weak: boolean,
+	/**  The library's search model, when a chosen task needs it. */
+	search: EmbeddingModel_Serialize | null,
+	searchInstalled: boolean,
+	/**  What is not installed yet. */
+	downloadGb: number | null,
+	freeGb: number | null,
+	enoughSpace: boolean,
+};
+
+export type Language = "spanish" | "english" | "both";
+
 export type LibraryOverview = LibraryOverview_Serialize | LibraryOverview_Deserialize;
 
 export type LibraryOverview_Deserialize = {
@@ -368,7 +422,12 @@ export type LocalModel_Deserialize = {
 	name: string,
 	params_b: number | null,
 	size_gb: number | null,
-	tools: ToolSkill,
+	tools: Rating,
+	analysis: Rating,
+	code: Rating,
+	spanish: Rating,
+	/**  For mixture-of-experts models: the parameters used per token, which set the speed. */
+	active_params_b?: number | null,
 };
 
 export type LocalModel_Serialize = {
@@ -377,7 +436,24 @@ export type LocalModel_Serialize = {
 	name: string,
 	paramsB: number | null,
 	sizeGb: number | null,
-	tools: ToolSkill,
+	tools: Rating,
+	analysis: Rating,
+	code: Rating,
+	spanish: Rating,
+	/**  For mixture-of-experts models: the parameters used per token, which set the speed. */
+	activeParamsB: number | null,
+};
+
+export type LocalModels = LocalModels_Serialize | LocalModels_Deserialize;
+
+export type LocalModels_Deserialize = {
+	models: InstalledModel[],
+	freeGb?: number | null,
+};
+
+export type LocalModels_Serialize = {
+	models: InstalledModel[],
+	freeGb: number | null,
 };
 
 /**
@@ -404,6 +480,20 @@ export type Message_Serialize = {
 	parts: Part_Serialize[],
 };
 
+export type ModelAdvice = ModelAdvice_Serialize | ModelAdvice_Deserialize;
+
+export type ModelAdvice_Deserialize = {
+	kit: Kit_Deserialize,
+	/**  Every model, best for the user first. */
+	ranked: Recommendation_Deserialize[],
+};
+
+export type ModelAdvice_Serialize = {
+	kit: Kit_Serialize,
+	/**  Every model, best for the user first. */
+	ranked: Recommendation_Serialize[],
+};
+
 export type Models = Models_Serialize | Models_Deserialize;
 
 export type Models_Deserialize = {
@@ -418,6 +508,23 @@ export type Models_Serialize = {
 	api: ApiModel_Serialize[],
 	/**  The first one is the library's; more are alternatives for later. */
 	embedding: EmbeddingModel_Serialize[],
+};
+
+/**  The user's answers to the setup interview. */
+export type Needs = Needs_Serialize | Needs_Deserialize;
+
+/**  The user's answers to the setup interview. */
+export type Needs_Deserialize = {
+	useCases?: string[],
+	language?: Language,
+	priority?: Priority,
+};
+
+/**  The user's answers to the setup interview. */
+export type Needs_Serialize = {
+	useCases: string[],
+	language: Language,
+	priority: Priority,
 };
 
 export type Node = {
@@ -476,6 +583,8 @@ export type Pending = {
 
 export type Permission = "allow" | "ask" | "deny";
 
+export type Priority = "fast" | "balanced" | "quality";
+
 export type Progress = { phase: "scanning" } | { phase: "reading"; done: number; total: number; file: string } | { phase: "embedding"; done: number; total: number } | { phase: "mapping" };
 
 export type Provider = "anthropic" | "openai";
@@ -498,6 +607,11 @@ export type PullProgress_Serialize = {
 	completed: number | null,
 };
 
+export type Rating = "poor" | "fair" | "good" | "great";
+
+/**  Why a model suits the user, for the UI to word. */
+export type Reason = "installed" | "fitsSmooth" | "fastMoe" | "toolsGreat" | "analysisGreat" | "codeGreat" | "spanishGreat";
+
 export type Recommendation = Recommendation_Serialize | Recommendation_Deserialize;
 
 export type Recommendation_Deserialize = {
@@ -505,6 +619,10 @@ export type Recommendation_Deserialize = {
 	memoryNeededGb: number | null,
 	fit: Fit,
 	weakToolUse: boolean,
+	installed: boolean,
+	/**  0 to 3: how well the model covers what the user asked for. */
+	score: number | null,
+	reasons: Reason[],
 	recommended: boolean,
 };
 
@@ -513,6 +631,10 @@ export type Recommendation_Serialize = {
 	memoryNeededGb: number | null,
 	fit: Fit,
 	weakToolUse: boolean,
+	installed: boolean,
+	/**  0 to 3: how well the model covers what the user asked for. */
+	score: number | null,
+	reasons: Reason[],
 	recommended: boolean,
 };
 
@@ -646,7 +768,8 @@ export type Setup = Setup_Serialize | Setup_Deserialize;
 
 export type Setup_Deserialize = {
 	engine: Engine,
-	useCase?: string | null,
+	/**  The answers to the setup interview, kept to recommend models later. */
+	needs?: Needs_Deserialize,
 	connectors: string[],
 	values?: { [key in string]: { [key in string]: FieldValue } },
 	permissions?: { [key in string]: { [key in string]: Permission } },
@@ -654,7 +777,8 @@ export type Setup_Deserialize = {
 
 export type Setup_Serialize = {
 	engine: Engine,
-	useCase: string | null,
+	/**  The answers to the setup interview, kept to recommend models later. */
+	needs: Needs_Serialize,
 	connectors: string[],
 	values: { [key in string]: { [key in string]: FieldValue } },
 	permissions: { [key in string]: { [key in string]: Permission } },
@@ -699,16 +823,12 @@ export type Summary = { kind: "passages"; count: number; documents: number } | {
 /**  Not run: blocked or declined. */
 { kind: "skipped" };
 
-export type SystemReport = SystemReport_Serialize | SystemReport_Deserialize;
-
-export type SystemReport_Deserialize = {
+export type SystemReport = {
 	hardware: Hardware,
-	recommendations: Recommendation_Deserialize[],
-};
-
-export type SystemReport_Serialize = {
-	hardware: Hardware,
-	recommendations: Recommendation_Serialize[],
+	/**  How much memory models can use here, fast and at all. */
+	capacity: Capacity,
+	/**  Whether any catalog model runs smoothly on this machine. */
+	runsLocal: boolean,
 };
 
 export type Table = {
@@ -729,8 +849,6 @@ export type TestReport = {
 };
 
 export type Tool = Tool_Serialize | Tool_Deserialize;
-
-export type ToolSkill = "poor" | "fair" | "good" | "great";
 
 /**  How a tool call went, for the conversation on screen. The UI words it. */
 export type ToolView = ToolView_Serialize | ToolView_Deserialize;
@@ -793,9 +911,24 @@ export type UpdateSummary_Serialize = {
 	embedError: string | null,
 };
 
-export type UseCase = {
+export type UseCase = UseCase_Serialize | UseCase_Deserialize;
+
+export type UseCase_Deserialize = {
 	id: string,
 	connectors: string[],
+	/**  What the local model must be good at for this task, as weights by skill name. */
+	skills?: { [key in string]: number | null },
+	/**  Whether the task uses the library, which needs the search model. */
+	embedding?: boolean,
+};
+
+export type UseCase_Serialize = {
+	id: string,
+	connectors: string[],
+	/**  What the local model must be good at for this task, as weights by skill name. */
+	skills: { [key in string]: number | null },
+	/**  Whether the task uses the library, which needs the search model. */
+	embedding: boolean,
 };
 
 /* Tauri Specta runtime */

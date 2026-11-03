@@ -19,15 +19,15 @@ use crate::chat::tools::{Attachment, Builtin, ReportTool};
 use crate::chat::{self, Activity, Approval, ChatEvent, Host};
 use crate::database::{self, Driver};
 use crate::error::{Error, Result};
-use crate::hardware::Hardware;
+use crate::hardware::{self, Hardware};
 use crate::library::{
     Answer, Embedder, Graph, Library, LibraryStatus, OllamaEmbedder, Progress, UpdateSummary,
 };
 use crate::policy::Permission;
 use crate::providers::chat::EngineModel;
-use crate::providers::ollama::{self, OllamaStatus, PullProgress};
+use crate::providers::ollama::{self, InstalledModel, OllamaStatus, PullProgress};
 use crate::providers::{self, Provider};
-use crate::recommend::{self, Recommendation};
+use crate::recommend::{self, Capacity, ModelAdvice, Needs};
 use crate::reports::focus::{Focus, Focuses, SavedFocuses};
 use crate::reports::history::{History, ReportEntry};
 use crate::reports::{
@@ -77,16 +77,85 @@ pub struct Paths {
 #[serde(rename_all = "camelCase")]
 pub struct SystemReport {
     pub hardware: Hardware,
-    pub recommendations: Vec<Recommendation>,
+    /// How much memory models can use here, fast and at all.
+    pub capacity: Capacity,
+    /// Whether any catalog model runs smoothly on this machine.
+    pub runs_local: bool,
 }
 
 #[tauri::command]
 #[specta::specta]
 pub fn system_report(state: State<'_, AppState>) -> SystemReport {
     SystemReport {
-        recommendations: recommend::rank(&state.hardware, &state.catalog.models.local),
+        capacity: Capacity::for_hardware(&state.hardware),
+        runs_local: recommend::runs_any(&state.hardware, &state.catalog.models.local),
         hardware: state.hardware.clone(),
     }
+}
+
+/// Free space where Ollama keeps its models.
+fn models_free_gb() -> Option<f64> {
+    let dir = ollama::models_dir()?;
+    // The folder may not exist yet; its disk is what matters.
+    let existing = dir.ancestors().find(|p| p.exists())?;
+    hardware::free_space_gb(existing)
+}
+
+/// Local models for the interview's answers: the kit to download and every model ranked.
+#[tauri::command]
+#[specta::specta]
+pub async fn recommend_models(state: State<'_, AppState>, needs: Needs) -> Result<ModelAdvice> {
+    let installed = match ollama::status(&state.http).await {
+        Ok(OllamaStatus::Running { models, .. }) => models,
+        _ => Vec::new(),
+    };
+    Ok(recommend::advise(
+        &state.hardware,
+        &state.catalog.models,
+        &state.catalog.use_cases,
+        &needs,
+        &installed,
+        models_free_gb(),
+    ))
+}
+
+#[derive(Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalModels {
+    pub models: Vec<InstalledModel>,
+    pub free_gb: Option<f64>,
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn local_models(state: State<'_, AppState>) -> Result<LocalModels> {
+    Ok(LocalModels {
+        models: ollama::installed(&state.http).await?,
+        free_gb: models_free_gb(),
+    })
+}
+
+/// Deletes a downloaded model, except the one the setup uses and the library's search model.
+#[tauri::command]
+#[specta::specta]
+pub async fn delete_model(state: State<'_, AppState>, name: String) -> Result<()> {
+    let same = |id: &str| name == id || name.strip_suffix(":latest") == Some(id);
+    let in_use = state
+        .setup
+        .read()
+        .ok()
+        .and_then(|s| match s.as_ref().map(|s| &s.engine) {
+            Some(Engine::Local { model }) => Some(same(model)),
+            _ => None,
+        })
+        .unwrap_or(false);
+    let search = state.catalog.models.embedding.iter().any(|m| same(&m.id));
+    if in_use || search {
+        return Err(Error::Provider(
+            "This model is in use. Choose another one first.".into(),
+        ));
+    }
+    ollama::delete(&state.http, &name).await
 }
 
 #[tauri::command]

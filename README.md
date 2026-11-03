@@ -4,9 +4,9 @@
 
 MCForge is an open-source desktop app (Windows, macOS, Linux) that walks you through building a local [Model Context Protocol](https://modelcontextprotocol.io) setup step by step:
 
-1. **Checks your computer** and recommends a model that will actually run well on it.
-2. **Pick your engine**: a local model (via [Ollama](https://ollama.com)) or an API (Anthropic, OpenAI).
-3. **Pick what you need**: files, databases, web, Git, reports… from a growing catalog.
+1. **Checks your computer** and how much model it can run smoothly.
+2. **Asks what you will do** (documents, reports, data, code, research), in which language, and whether you prefer speed or quality, then recommends one local model that covers it all — preferring one you already have — so you download once.
+3. **Pick your engine**: that local model (via [Ollama](https://ollama.com)) or an API (Anthropic, OpenAI). The connections you need are preselected from your answers.
 4. **Decide what the AI may do**: every tool is allowed, asks first, or is blocked. MCForge enforces it — not the prompt.
 5. **Generate reports**: pick a CSV or Excel file and ask a question. The AI plans the analysis as read-only SQL and writes the conclusions; MCForge runs the queries, draws the charts and renders the document from a template, so every figure comes straight from the data. Choose who the report is for (finance, sales, your own focus…) and read it inside the app.
 6. **Chat with your tools**: ask in plain words; the assistant searches your library, queries your database and creates reports from files you attach, streaming its answer. Every tool call follows your rules, and anything that asks first shows you exactly what it will do.
